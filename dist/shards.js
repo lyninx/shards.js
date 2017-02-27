@@ -53,19 +53,52 @@
 
 	'use strict';
 	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
 	var _App = __webpack_require__(2);
 	
 	var _App2 = _interopRequireDefault(_App);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	__webpack_require__(181);
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	__webpack_require__(182);
 	
 	var controls = document.getElementById("bottom");
 	
+	// TODO: use polymer web components in the future
+	// 		 inherit from HTMLCanvasElement when browser support allows
+	
+	var ShardsElement = function (_HTMLElement) {
+		_inherits(ShardsElement, _HTMLElement);
+	
+		function ShardsElement() {
+			_classCallCheck(this, ShardsElement);
+	
+			return _possibleConstructorReturn(this, (ShardsElement.__proto__ || Object.getPrototypeOf(ShardsElement)).apply(this, arguments));
+		}
+	
+		_createClass(ShardsElement, [{
+			key: 'connectedCallback',
+			value: function connectedCallback() {
+				this.style.display = "block";
+			}
+		}]);
+	
+		return ShardsElement;
+	}(HTMLElement);
+	
+	customElements.define('shards-canvas', ShardsElement);
+	
 	document.addEventListener('DOMContentLoaded', function () {
 		console.log("DOM loaded");
-		var app = new _App2.default(document.getElementById("shards"));
+		var elems = document.getElementsByTagName("shards-canvas");
+		var app = new _App2.default(elems[0]);
 		app.start();
 	});
 
@@ -99,11 +132,11 @@
 	var loadSvg = __webpack_require__(96);
 	var parsePath = __webpack_require__(104).parse;
 	var svgMesh = __webpack_require__(106);
-	var createGeom = __webpack_require__(177)(THREE);
-	var orbitControls = __webpack_require__(178)(THREE);
-	
-	var vertShader = __webpack_require__(179);
-	var fragShader = __webpack_require__(180);
+	var elementResize = __webpack_require__(177);
+	var createGeom = __webpack_require__(178)(THREE);
+	var orbitControls = __webpack_require__(179)(THREE);
+	var vertShader = __webpack_require__(180);
+	var fragShader = __webpack_require__(181);
 	
 	var NEAR = 0.1;
 	var FAR = 2000;
@@ -174,7 +207,8 @@
 	        value: function _setupDOM() {
 	            window.anim = this._animate;
 	            window.loadSVG = this._loadSVG;
-	            //window.addEventListener('resize', this._handleResize)
+	            //this.canvas.element.addEventListener('resize', this._handleResize)
+	            elementResize(this.canvas.element, this._handleResize);
 	            this.canvas.element.appendChild(this._renderer.domElement);
 	
 	            var vp = document.getElementById("viewport");
@@ -272,10 +306,10 @@
 	        value: function _handleResize(event) {
 	            var renderer = this._renderer;
 	            var camera = this._camera;
-	
-	            camera.aspect = window.innerWidth / window.innerHeight;
+	            var canvas = this.canvas.element;
+	            camera.aspect = canvas.clientWidth / canvas.clientHeight;
 	            camera.updateProjectionMatrix();
-	            renderer.setSize(window.innerWidth, window.innerHeight);
+	            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 	        }
 	    }, {
 	        key: '_animate',
@@ -58168,6 +58202,106 @@
 
 /***/ },
 /* 177 */
+/***/ function(module, exports) {
+
+	var exports = function exports(element, fn) {
+	  var window = this
+	  var document = window.document
+	  var isIE
+	  var requestFrame
+	
+	  var attachEvent = document.attachEvent
+	  if (typeof navigator !== 'undefined') {
+	    isIE = navigator.userAgent.match(/Trident/) || navigator.userAgent.match(/Edge/)
+	  }
+	
+	  requestFrame = (function () {
+	    var raf = window.requestAnimationFrame ||
+	      window.mozRequestAnimationFrame ||
+	        window.webkitRequestAnimationFrame ||
+	          function fallbackRAF(func) {
+	            return window.setTimeout(func, 20)
+	          }
+	    return function requestFrameFunction(func) {
+	      return raf(func)
+	    }
+	  })()
+	
+	  var cancelFrame = (function () {
+	    var cancel = window.cancelAnimationFrame ||
+	      window.mozCancelAnimationFrame ||
+	        window.webkitCancelAnimationFrame ||
+	          window.clearTimeout
+	    return function cancelFrameFunction(id) {
+	      return cancel(id)
+	    }
+	  })()
+	
+	  function resizeListener(e) {
+	    var win = e.target || e.srcElement
+	    if (win.__resizeRAF__) {
+	      cancelFrame(win.__resizeRAF__)
+	    }
+	    win.__resizeRAF__ = requestFrame(function () {
+	      var trigger = win.__resizeTrigger__
+	      if(trigger !== undefined) {
+	        trigger.__resizeListeners__.forEach(function (fn) {
+	          fn.call(trigger, e)
+	        })
+	      }
+	    })
+	  }
+	
+	  function objectLoad() {
+	    this.contentDocument.defaultView.__resizeTrigger__ = this.__resizeElement__
+	    this.contentDocument.defaultView.addEventListener('resize', resizeListener)
+	  }
+	
+	  if (!element.__resizeListeners__) {
+	    element.__resizeListeners__ = []
+	    if (attachEvent) {
+	      element.__resizeTrigger__ = element
+	      element.attachEvent('onresize', resizeListener)
+	    } else {
+	      if (getComputedStyle(element).position === 'static') {
+	        element.style.position = 'relative'
+	      }
+	      var obj = element.__resizeTrigger__ = document.createElement('object')
+	      obj.setAttribute('style', 'display: block; position: absolute; top: 0; left: 0; height: 100%; width: 100%; overflow: hidden; pointer-events: none; z-index: -1; opacity: 0;')
+	      obj.setAttribute('class', 'resize-sensor')
+	      obj.__resizeElement__ = element
+	      obj.onload = objectLoad
+	      obj.type = 'text/html'
+	      if (isIE) {
+	        element.appendChild(obj)
+	      }
+	      obj.data = 'about:blank'
+	      if (!isIE) {
+	        element.appendChild(obj)
+	      }
+	    }
+	  }
+	  element.__resizeListeners__.push(fn)
+	}
+	
+	exports.unbind = function(element, fn){
+	  var attachEvent = document.attachEvent;
+	  element.__resizeListeners__.splice(element.__resizeListeners__.indexOf(fn), 1);
+	  if (!element.__resizeListeners__.length) {
+	    if (attachEvent) {
+	      element.detachEvent('onresize', resizeListener);
+	    } else {
+	      element.__resizeTrigger__.contentDocument.defaultView.removeEventListener('resize', resizeListener);
+	      element.__resizeTrigger__ = !element.removeChild(element.__resizeTrigger__);
+	    }
+	  }
+	}
+	
+	module.exports = (typeof window === 'undefined') ? exports : exports.bind(window)
+
+
+/***/ },
+/* 178 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var inherits = __webpack_require__(42)
@@ -58225,7 +58359,7 @@
 	}
 
 /***/ },
-/* 178 */
+/* 179 */
 /***/ function(module, exports) {
 
 	module.exports = function( THREE ) {
@@ -59251,28 +59385,28 @@
 
 
 /***/ },
-/* 179 */
+/* 180 */
 /***/ function(module, exports) {
 
 	module.exports = "attribute vec3 direction;\nattribute vec3 centroid;\nattribute vec3 random;\n\nuniform float animate;\nuniform float opacity;\nuniform float scale;\n\nvarying vec3 color;\n\n#define PI 3.1415\n\nvoid main() {\n  // rotate the triangles\n  // each half rotates the opposite direction\n  float swirl = 1.0;\n  float theta = (1.0 - animate) * (PI * swirl) * sign(centroid.x);\n  //float theta = (1.0 - animate) * (PI * 1.5);\n  mat3 rotMat = mat3(\n    vec3(cos(theta), 0.0, sin(theta)),\n    vec3(0.0, 1.0, 0.0),\n    vec3(-sin(theta), 0.0, cos(theta))\n  );\n  mat3 rotMat2 = mat3(\n    vec3(1.0, 0.0, 0.0),\n    vec3(0.0, cos(-2.0 * direction.y), -sin(-2.0 * direction.y)),\n    vec3(0.0, sin(-2.0 * direction.y), cos(-2.0 * direction.y))\n  );\n  \n  vec3 offset = mix(vec3(0.0), direction.xyz * rotMat, 1.0 - animate);\n  // scale triangles to their centroids\n  vec3 tPos = mix(mix(centroid.xyz, position.xyz, scale), position.xyz * rotMat2, 1.0 - animate) + offset;\n\n  color = vec3(1.0);\n  \n  gl_Position = projectionMatrix * modelViewMatrix * vec4(tPos, 1.0);\n  //gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}"
 
 /***/ },
-/* 180 */
+/* 181 */
 /***/ function(module, exports) {
 
 	module.exports = "uniform float animate;\nuniform float opacity;\nvarying vec3 color;\n\nvoid main() {\n  gl_FragColor = vec4(color, opacity);\n}"
 
 /***/ },
-/* 181 */
+/* 182 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 	
 	// load the styles
-	var content = __webpack_require__(182);
+	var content = __webpack_require__(183);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(184)(content, {});
+	var update = __webpack_require__(185)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -59289,21 +59423,21 @@
 	}
 
 /***/ },
-/* 182 */
+/* 183 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(183)();
+	exports = module.exports = __webpack_require__(184)();
 	// imports
 	
 	
 	// module
-	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  height: 100%;\n  font-family: 'Nunito Sans', sans-serif;\n  padding: 24px; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\nbutton {\n  border: none;\n  font-size: 16px;\n  font-weight: bold;\n  letter-spacing: .2px;\n  padding: 4px 10px;\n  background: #eee; }\n  button:hover {\n    background: #fff;\n    cursor: pointer; }\n\n#frame {\n  font-family: 'Share Tech Mono', monospace;\n  color: #333; }\n  #frame .overlay {\n    display: flex;\n    flex-direction: column;\n    position: absolute;\n    width: 100%;\n    height: calc(100% - 0px);\n    letter-spacing: 1px; }\n    #frame .overlay .main {\n      margin: 16px;\n      flex-grow: 1;\n      width: 100%; }\n    #frame .overlay .content {\n      margin: 0 auto;\n      width: 1120px;\n      min-width: 600px;\n      display: flex; }\n      #frame .overlay .content .l, #frame .overlay .content .r {\n        margin: 6px;\n        padding: 12px;\n        background: #fff;\n        flex-grow: 1;\n        flex-basis: 50%; }\n    #frame .overlay .controls {\n      width: 100%;\n      background: #fff;\n      height: 60px; }\n      #frame .overlay .controls .content {\n        display: flex;\n        justify-content: space-between;\n        width: 100%; }\n        #frame .overlay .controls .content .timeline {\n          margin: 12px auto;\n          width: 1120px;\n          flex-basis: 1120px; }\n      #frame .overlay .controls .icons {\n        position: absolute;\n        width: 60px;\n        min-width: 60px;\n        flex-basis: 60px;\n        height: 60px;\n        margin: 0; }\n      #frame .overlay .controls input[type=text] {\n        width: 90%;\n        margin: 16px;\n        padding: 0;\n        outline: none;\n        letter-spacing: 0.5px;\n        background: transparent;\n        border: 0;\n        border-bottom: 4px solid #000;\n        color: #000;\n        font-size: 16px; }\n      #frame .overlay .controls input[type=range] {\n        outline: none;\n        -webkit-appearance: none;\n        width: 100%;\n        margin: 0px;\n        margin-top: 20px; }\n      #frame .overlay .controls input[type=range]::-webkit-slider-runnable-track {\n        width: 100%;\n        height: 4px;\n        background: none;\n        border-bottom: 4px solid #000; }\n      #frame .overlay .controls input[type=range]::-webkit-slider-thumb {\n        -webkit-appearance: none;\n        border-left: 10px solid transparent;\n        border-right: 10px solid transparent;\n        border-top: 16px solid #f00;\n        height: 18px;\n        width: 16px;\n        margin-top: -20px; }\n      #frame .overlay .controls input[type=range]::-moz-range-thumb {\n        -webkit-appearance: none;\n        border-left: 10px solid transparent;\n        border-right: 10px solid transparent;\n        border-top: 16px solid #f00;\n        height: 18px;\n        width: 16px;\n        margin-top: -4px; }\n      #frame .overlay .controls input[type=range]::-ms-thumb {\n        -webkit-appearance: none;\n        border-left: 10px solid transparent;\n        border-right: 10px solid transparent;\n        border-top: 16px solid #f00;\n        height: 18px;\n        width: 16px;\n        margin-top: -4px; }\n    #frame .overlay #bottom {\n      transition: all 0.5s ease-in-out;\n      display: flex;\n      flex-wrap: wrap;\n      font-family: 'Nunito Sans', sans-serif;\n      background: rgba(220, 220, 220, 0.8);\n      padding: 0px;\n      height: 0px;\n      margin: auto;\n      width: inherit;\n      letter-spacing: 0.5px; }\n      #frame .overlay #bottom.active {\n        padding: 0px;\n        height: 200px; }\n  #frame #fps {\n    display: inline-block; }\n", ""]);
+	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  height: 100%;\n  font-family: 'Nunito Sans', sans-serif;\n  padding: 24px; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\n.shards {\n  width: 80%;\n  height: 400px; }\n\nbutton {\n  border: none;\n  font-size: 16px;\n  font-weight: bold;\n  letter-spacing: .2px;\n  padding: 4px 10px;\n  background: #eee; }\n  button:hover {\n    background: #fff;\n    cursor: pointer; }\n\n#frame {\n  font-family: 'Share Tech Mono', monospace;\n  color: #333; }\n  #frame .overlay {\n    display: flex;\n    flex-direction: column;\n    position: absolute;\n    width: 100%;\n    height: calc(100% - 0px);\n    letter-spacing: 1px; }\n    #frame .overlay .main {\n      margin: 16px;\n      flex-grow: 1;\n      width: 100%; }\n    #frame .overlay .content {\n      margin: 0 auto;\n      width: 1120px;\n      min-width: 600px;\n      display: flex; }\n      #frame .overlay .content .l, #frame .overlay .content .r {\n        margin: 6px;\n        padding: 12px;\n        background: #fff;\n        flex-grow: 1;\n        flex-basis: 50%; }\n    #frame .overlay .controls {\n      width: 100%;\n      background: #fff;\n      height: 60px; }\n      #frame .overlay .controls .content {\n        display: flex;\n        justify-content: space-between;\n        width: 100%; }\n        #frame .overlay .controls .content .timeline {\n          margin: 12px auto;\n          width: 1120px;\n          flex-basis: 1120px; }\n      #frame .overlay .controls .icons {\n        position: absolute;\n        width: 60px;\n        min-width: 60px;\n        flex-basis: 60px;\n        height: 60px;\n        margin: 0; }\n      #frame .overlay .controls input[type=text] {\n        width: 90%;\n        margin: 16px;\n        padding: 0;\n        outline: none;\n        letter-spacing: 0.5px;\n        background: transparent;\n        border: 0;\n        border-bottom: 4px solid #000;\n        color: #000;\n        font-size: 16px; }\n      #frame .overlay .controls input[type=range] {\n        outline: none;\n        -webkit-appearance: none;\n        width: 100%;\n        margin: 0px;\n        margin-top: 20px; }\n      #frame .overlay .controls input[type=range]::-webkit-slider-runnable-track {\n        width: 100%;\n        height: 4px;\n        background: none;\n        border-bottom: 4px solid #000; }\n      #frame .overlay .controls input[type=range]::-webkit-slider-thumb {\n        -webkit-appearance: none;\n        border-left: 10px solid transparent;\n        border-right: 10px solid transparent;\n        border-top: 16px solid #f00;\n        height: 18px;\n        width: 16px;\n        margin-top: -20px; }\n      #frame .overlay .controls input[type=range]::-moz-range-thumb {\n        -webkit-appearance: none;\n        border-left: 10px solid transparent;\n        border-right: 10px solid transparent;\n        border-top: 16px solid #f00;\n        height: 18px;\n        width: 16px;\n        margin-top: -4px; }\n      #frame .overlay .controls input[type=range]::-ms-thumb {\n        -webkit-appearance: none;\n        border-left: 10px solid transparent;\n        border-right: 10px solid transparent;\n        border-top: 16px solid #f00;\n        height: 18px;\n        width: 16px;\n        margin-top: -4px; }\n    #frame .overlay #bottom {\n      transition: all 0.5s ease-in-out;\n      display: flex;\n      flex-wrap: wrap;\n      font-family: 'Nunito Sans', sans-serif;\n      background: rgba(220, 220, 220, 0.8);\n      padding: 0px;\n      height: 0px;\n      margin: auto;\n      width: inherit;\n      letter-spacing: 0.5px; }\n      #frame .overlay #bottom.active {\n        padding: 0px;\n        height: 200px; }\n  #frame #fps {\n    display: inline-block; }\n", ""]);
 	
 	// exports
 
 
 /***/ },
-/* 183 */
+/* 184 */
 /***/ function(module, exports) {
 
 	/*
@@ -59359,7 +59493,7 @@
 
 
 /***/ },
-/* 184 */
+/* 185 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*

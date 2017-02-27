@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "css-loader": "^0.26.1",
+    "element-resize-event": "^2.0.7",
     "extract-svg-path": "^2.1.0",
     "gl-vec3": "^1.0.3",
     "load-svg": "^1.0.0",

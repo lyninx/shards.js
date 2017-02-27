@@ -4,11 +4,11 @@ const unindex           = require('unindex-mesh')
 const loadSvg           = require('load-svg')
 const parsePath         = require('extract-svg-path').parse
 const svgMesh           = require('svg-mesh-3d')
+const elementResize     = require('element-resize-event')
 const createGeom        = require('three-simplicial-complex')(THREE)
 const orbitControls     = require('three-orbit-controls')(THREE)
-
-const vertShader = require('./shaders/vertex.glsl')
-const fragShader = require('./shaders/fragment.glsl')
+const vertShader        = require('./shaders/vertex.glsl')
+const fragShader        = require('./shaders/fragment.glsl')
 
 const NEAR = 0.1
 const FAR = 2000
@@ -64,7 +64,8 @@ export default class App {
     _setupDOM() {
         window.anim = this._animate
         window.loadSVG = this._loadSVG
-        //window.addEventListener('resize', this._handleResize)
+        //this.canvas.element.addEventListener('resize', this._handleResize)
+        elementResize(this.canvas.element, this._handleResize)
         this.canvas.element.appendChild(this._renderer.domElement)
 
         let vp = document.getElementById("viewport")
@@ -157,10 +158,10 @@ export default class App {
     _handleResize(event) {
         let renderer = this._renderer
         let camera = this._camera
-
-        camera.aspect = window.innerWidth / window.innerHeight
+        let canvas = this.canvas.element
+        camera.aspect = canvas.clientWidth / canvas.clientHeight
         camera.updateProjectionMatrix()
-        renderer.setSize(window.innerWidth, window.innerHeight)
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight)
     }
 
     _animate() { 
