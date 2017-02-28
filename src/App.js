@@ -6,7 +6,6 @@ const parsePath         = require('extract-svg-path').parse
 const svgMesh           = require('svg-mesh-3d')
 const elementResize     = require('element-resize-event')
 const createGeom        = require('three-simplicial-complex')(THREE)
-const orbitControls     = require('three-orbit-controls')(THREE)
 const vertShader        = require('./shaders/vertex.glsl')
 const fragShader        = require('./shaders/fragment.glsl')
 
@@ -26,12 +25,13 @@ export default class App {
         this.wave = {}
         this.primary = {}
         this.canvas = {}
-        this.canvas.element = domElement
-        this.animation = {}
+        this.element = domElement
 
-        this._bind('_render', '_handleResize', '_animate', '_loadSVG', '_update')
+        this.params = {}
+
+        this._bind('_render', '_handleResize', '_loadSVG', '_update')
         this._time = 0.0
-        this._init()
+        this._configure()
         this._setup3D()
         this._setupDOM()
         this._createScene()      
@@ -44,10 +44,17 @@ export default class App {
     _bind(...methods) {
         methods.forEach((method) => this[method] = this[method].bind(this))
     }
-    _init() {
-        this.canvas.width = this.canvas.element.clientWidth
-        this.canvas.height = this.canvas.element.clientHeight
-        console.log(this.canvas)
+    _configure() {
+        this.canvas.width = this.element.clientWidth
+        this.canvas.height = this.element.clientHeight
+        
+        this.params.svg = this.element.getAttribute("svg")               || ""
+        this.params.color = this.element.getAttribute("color")           || "#000"
+        this.params.background = this.element.getAttribute("background") || "#fff"
+        this.params.zoom = this.element.getAttribute("zoom")             || 1.0
+        this.params.animation = this.element.getAttribute("animation")
+        this.params.duration = this.element.getAttribute("duration")     || 4000
+        this.params.delay = this.element.getAttribute("delay")           || 1000
     }
     _setup3D() {
         const renderer = this._renderer = new THREE.WebGLRenderer({antialias: true})
@@ -62,23 +69,14 @@ export default class App {
     }
 
     _setupDOM() {
-        window.anim = this._animate
-        window.loadSVG = this._loadSVG
-        //this.canvas.element.addEventListener('resize', this._handleResize)
-        elementResize(this.canvas.element, this._handleResize)
-        this.canvas.element.appendChild(this._renderer.domElement)
-
-        let vp = document.getElementById("viewport")
-        //this._controls = new orbitControls(this._camera, vp)
-
-        this.animation.play = true
-        this.animation.events = []
+        elementResize(this.element, this._handleResize)
+        this.element.appendChild(this._renderer.domElement)
     }
 
     _createScene() {
         const scene = this._scene
 
-        this.animation.frame = 0
+        this.frame = 0
         this.prev_frame = -1
 
         this.wave.dimensions = [WAVE_DIM, WAVE_DIM]
@@ -117,12 +115,11 @@ export default class App {
         this.wave.mesh = mesh
         scene.add(mesh)
         ////////
-        this._loadSVG(true)
+        this._loadSVG()
     }
 
     _update(dt) {
         this._time += dt
-        let animation_event = this.animation.events[this.animation.frame]
 
         let wave = function(x, y, offset) {
             return 0.5 * ( 0.4 * Math.sin((y / 16) + offset) + Math.sin((x / 2.3) + (-0.4 * offset))
@@ -158,38 +155,21 @@ export default class App {
     _handleResize(event) {
         let renderer = this._renderer
         let camera = this._camera
-        let canvas = this.canvas.element
+        let canvas = this.element
         camera.aspect = canvas.clientWidth / canvas.clientHeight
         camera.updateProjectionMatrix()
         renderer.setSize(canvas.clientWidth, canvas.clientHeight)
     }
 
-    _animate() { 
-        this.animation.play = !this.animation.play
-    }
-
     // load svg 
-    _loadSVG(init = false) {
+    _loadSVG() {
         var self = this
         this.svg_loaded = false
-        if(init){
-            // load default SVG asychronously 
-            loadSvg('lyninx.svg', function (err, svg) {
-                if (err) throw err
-                load(svg)
-            })
-        } else {
-            let input = document.getElementById("svg-input")
-            var fReader = new FileReader()
-            fReader.readAsDataURL(input.files[0])
-            fReader.onloadend = function(event){
-                let svg = atob(event.target.result.split(",")[1])
-                // TODO: check if input is a valid SVG
-                clearSVG()
-                load(svg)
-
-            }        
-        }
+        // load default SVG asychronously 
+        loadSvg(this.params.svg, function (err, svg) {
+            if (err) throw err
+            load(svg)
+        })
         // load svg into scene
         function load(svg){
             let svgPath = parsePath(svg)
