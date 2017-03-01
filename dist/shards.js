@@ -203,7 +203,7 @@
 	            var renderer = this._renderer = new THREE.WebGLRenderer({ antialias: true });
 	            renderer.setSize(this.canvas.width, this.canvas.height);
 	            renderer.setPixelRatio(window.devicePixelRatio);
-	            renderer.setClearColor(0xe0e0e0);
+	            renderer.setClearColor(0x60a0a0);
 	
 	            this._scene = new THREE.Scene();
 	            this._camera = new THREE.PerspectiveCamera(this.config.fov, this.canvas.width / this.canvas.height, NEAR, FAR);
@@ -58368,7 +58368,7 @@
 	
 	
 	// module
-	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  height: 100%;\n  font-family: 'Nunito Sans', sans-serif; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\n.shards {\n  height: 400px; }\n\n.main {\n  max-width: 1020px;\n  padding: 24px; }\n  .main .content {\n    padding: 12px;\n    background: #333; }\n  .main #frame {\n    font-family: 'Share Tech Mono', monospace;\n    color: #333; }\n", ""]);
+	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  height: 100%;\n  font-family: 'Nunito Sans', sans-serif; }\n\n.hljs {\n  padding: 12px; }\n\ncode {\n  padding: 12px;\n  white-space: normal; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\n.shards {\n  height: 400px; }\n\n.main {\n  max-width: 1020px;\n  padding: 24px; }\n  .main .content {\n    padding: 12px;\n    background: #eee;\n    color: #000; }\n  .main #frame {\n    font-family: 'Share Tech Mono', monospace;\n    color: #333; }\n", ""]);
 	
 	// exports
 
