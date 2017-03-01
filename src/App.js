@@ -50,7 +50,7 @@ export default class App {
         
         this.config.svg = this.element.getAttribute("svg")                       || ""
         this.config.color = this.element.getAttribute("color")                   || "#000"
-        this.config.background = this.element.getAttribute("background")         || "#fff"
+        this.config.background = this.element.getAttribute("background")         || "fff"
         this.config.zoom = parseFloat(this.element.getAttribute("zoom"))         || 1.0
         this.config.x_offset = parseFloat(this.element.getAttribute("x_offset")) || 0.0
         this.config.y_offset = parseFloat(this.element.getAttribute("y_offset")) || 0.0
@@ -64,7 +64,7 @@ export default class App {
         const renderer = this._renderer = new THREE.WebGLRenderer({antialias: true})
         renderer.setSize(this.canvas.width, this.canvas.height)
         renderer.setPixelRatio(window.devicePixelRatio)
-        renderer.setClearColor(0x60a0a0)
+        renderer.setClearColor(this.config.background)
 
         this._scene = new THREE.Scene()
         this._camera = new THREE.PerspectiveCamera(this.config.fov, this.canvas.width / this.canvas.height, NEAR, FAR)
@@ -101,7 +101,7 @@ export default class App {
         })
 
         this._loadSVG()
-        let anim = new Animate(this.primary.material, "explode")
+        let anim = new Animate(this.primary.material, "explode",this.config.duration, this.config.delay)
         anim.play()
     }
 

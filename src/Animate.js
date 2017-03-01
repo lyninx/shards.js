@@ -2,7 +2,7 @@ const Tweenr 	= require('tweenr')
 const tweenr = Tweenr({ defaultEase: 'expoOut' })
 
 export default class Animate {
-	constructor(material, animation, duration = 4.0, delay = 0.0) {
+	constructor(material, animation, duration = 4.0, delay = 1.0) {
 		this.duration = duration
 		this.delay = delay
 		this.animation = animation
@@ -18,12 +18,13 @@ export default class Animate {
 	play() {
 		switch(this.animation) {
 			case "explode": 
-				this.explode(this.duration, 1.0)
+				this.explode(this.duration, this.delay)
 				this.animation = "implode"
 				break
 			case "implode":
 				this.implode(this.duration)
 				this.animation = "explode"
+				break
 			default: console.log("invalid animation")
 		}
 	}
