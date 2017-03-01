@@ -12,6 +12,14 @@ body {
     font-family: 'Nunito Sans', sans-serif;
 }
 
+.hljs {
+	padding: 12px;
+}
+code {
+	padding:12px;
+	white-space: normal;
+}
+
 ::-webkit-input-placeholder {
    color: #444;
 }
@@ -37,7 +45,8 @@ body {
 	padding:24px;
 	.content {
 		padding:12px;
-		background:#333;
+		background:#eee;
+		color:#000;
 	}
 	#frame {
 		font-family: 'Share Tech Mono', monospace;

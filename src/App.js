@@ -64,7 +64,7 @@ export default class App {
         const renderer = this._renderer = new THREE.WebGLRenderer({antialias: true})
         renderer.setSize(this.canvas.width, this.canvas.height)
         renderer.setPixelRatio(window.devicePixelRatio)
-        renderer.setClearColor(0xe0e0e0)
+        renderer.setClearColor(0x60a0a0)
 
         this._scene = new THREE.Scene()
         this._camera = new THREE.PerspectiveCamera(this.config.fov, this.canvas.width / this.canvas.height, NEAR, FAR)
