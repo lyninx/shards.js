@@ -10,7 +10,6 @@ body {
     width: 100%;
     height: 100%;
     font-family: 'Nunito Sans', sans-serif;
-    padding:24px;
 }
 
 ::-webkit-input-placeholder {
@@ -30,143 +29,18 @@ body {
 }
 
 .shards {
-	width:80%; 
 	height:400px;
 }
-button {
-	&:hover {
-		background:#fff;
-		cursor:pointer;
-	}
-	border:none;
-	font-size:16px;
-	font-weight:bold;
-	letter-spacing: .2px;
-	padding:4px 10px;
-	background:#eee;
-}
 
-#frame {
-	.overlay {
-		display:flex;
-		flex-direction:column;
-		position:absolute;
-		width:100%;
-		height:calc(100% - 0px);
-		letter-spacing:1px;
-		.main {
-			margin:16px;
-			flex-grow:1;
-			width:100%;
-		}
-		.content {
-			margin:0 auto;
-			width:1120px;
-			min-width: 600px;
-			display:flex;
-			.l, .r {
-				margin: 6px;
-				padding:12px;
-				background:#fff;
-				flex-grow:1;
-				flex-basis:50%;
-			}
-		}
-		.controls {
-			.content {
-				display:flex;
-				justify-content:space-between;
-				width:100%;
-				.timeline {
-					margin: 12px auto;
-					width:1120px;
-					flex-basis:1120px;
-				}
-			}
-			width:100%;
-			background:#fff;
-			height:60px;
-			.icons {
-				position:absolute;
-				width:60px;
-				min-width:60px;
-				flex-basis:60px;
-				height:60px;
-				margin:0;
-			}
-			input[type=text] {
-				width:90%;
-				margin:16px;
-				padding:0;
-				outline: none;
-				letter-spacing:0.5px;
-				background:rgba(0,0,0,0);
-				border:0;
-				border-bottom:4px solid #000;
-				color:#000;
-				font-size:16px;
-			}
-			input[type=range] {
-				outline: none;
-				-webkit-appearance: none; 
-				width: 100%; 
-				margin:0px;
-				margin-top:20px;
-			}
-			input[type=range]::-webkit-slider-runnable-track {
-				width: 100%;
-				height: 4px;
-				background: none;
-				border-bottom:4px solid #000;
-			}
-			input[type=range]::-webkit-slider-thumb {
-				-webkit-appearance: none;
-				border-left: 10px solid transparent;
-				border-right: 10px solid transparent;
-				border-top: 16px solid #f00;
-				height: 18px;
-				width: 16px;
-				margin-top: -20px;
-			}
-			input[type=range]::-moz-range-thumb {
-				-webkit-appearance: none;
-				border-left: 10px solid transparent;
-				border-right: 10px solid transparent;
-				border-top: 16px solid #f00;
-				height: 18px;
-				width: 16px;
-				margin-top: -4px;
-			}
-			input[type=range]::-ms-thumb {
-				-webkit-appearance: none;
-				border-left: 10px solid transparent;
-				border-right: 10px solid transparent;
-				border-top: 16px solid #f00;
-				height: 18px;
-				width: 16px;
-				margin-top: -4px;
-			}
-		}
-		#bottom {
-			transition:all 0.5s ease-in-out;
-			display:flex;
-			flex-wrap:wrap;
-			font-family: 'Nunito Sans', sans-serif;
-			background:rgba(220,220,220,0.8);
-			padding:0px;
-			height:0px;
-			margin:auto;
-			width:inherit;
-			letter-spacing:0.5px;
-			&.active {
-				padding: 0px;
-				height:200px;
-			}
-		}
+.main {
+	max-width:1020px;
+	padding:24px;
+	.content {
+		padding:12px;
+		background:#333;
 	}
-	#fps {
-		display:inline-block;
+	#frame {
+		font-family: 'Share Tech Mono', monospace;
+		color:#333;
 	}
-	font-family: 'Share Tech Mono', monospace;
-	color:#333;
 }

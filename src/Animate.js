@@ -2,21 +2,30 @@ const Tweenr 	= require('tweenr')
 const tweenr = Tweenr({ defaultEase: 'expoOut' })
 
 export default class Animate {
-	constructor(material, animation) {
-		this.duration = 2.0
+	constructor(material, animation, duration = 4.0, delay = 0.0) {
+		this.duration = duration
+		this.delay = delay
 		this.animation = animation
 		this.material = material
-		this._bind('run', 'explode')
+		this._bind('play', 'explode')
 
 	}
-	run() {
-		switch(this.animation) {
-			case 0: this.explode(this.duration); break;
-			default: console.log("invalid animation set")
-		}
-	}
+
 	_bind(...methods) {
 		methods.forEach((method) => this[method] = this[method].bind(this));
+	}
+
+	play() {
+		switch(this.animation) {
+			case "explode": 
+				this.explode(this.duration, 1.0)
+				this.animation = "implode"
+				break
+			case "implode":
+				this.implode(this.duration)
+				this.animation = "explode"
+			default: console.log("invalid animation")
+		}
 	}
 
 	explode(dur, delay = 0){
@@ -30,20 +39,24 @@ export default class Animate {
 			duration: dur, 
 			value: 0, 
 			delay: delay
+		}).on('complete', () => {
+			this.play()
 		})
 	}
 
 	implode(material, delay = 0) {
-		tweenr.to(material.uniforms.animate, {
+		tweenr.to(this.material.uniforms.animate, {
 			duration: 2.0, 
 			value: 1, 
 			delay: delay, 
 			ease: 'quadInOut'
 		})
-		tweenr.to(material.uniforms.scale, {
+		tweenr.to(this.material.uniforms.scale, {
 			duration: 2.0, 
 			value: 1, 
 			delay: delay
+		}).on('complete', () => {
+			this.play()
 		})
 	}
 }

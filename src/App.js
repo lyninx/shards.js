@@ -17,7 +17,7 @@ const WAVE_DIM = 16
 let prev_frame = 0.0
 let time = 0.0
 
-import animate from './Animate.js'
+import Animate from './Animate.js'
 import util from './Util.js'
 
 export default class App {
@@ -27,7 +27,7 @@ export default class App {
         this.canvas = {}
         this.element = domElement
 
-        this.params = {}
+        this.config = {}
 
         this._bind('_render', '_handleResize', '_loadSVG', '_update')
         this._time = 0.0
@@ -48,14 +48,18 @@ export default class App {
         this.canvas.width = this.element.clientWidth
         this.canvas.height = this.element.clientHeight
         
-        this.params.svg = this.element.getAttribute("svg")               || ""
-        this.params.color = this.element.getAttribute("color")           || "#000"
-        this.params.background = this.element.getAttribute("background") || "#fff"
-        this.params.zoom = this.element.getAttribute("zoom")             || 1.0
-        this.params.animation = this.element.getAttribute("animation")
-        this.params.duration = this.element.getAttribute("duration")     || 4000
-        this.params.delay = this.element.getAttribute("delay")           || 1000
+        this.config.svg = this.element.getAttribute("svg")                       || ""
+        this.config.color = this.element.getAttribute("color")                   || "#000"
+        this.config.background = this.element.getAttribute("background")         || "#fff"
+        this.config.zoom = parseFloat(this.element.getAttribute("zoom"))         || 1.0
+        this.config.x_offset = parseFloat(this.element.getAttribute("x_offset")) || 0.0
+        this.config.y_offset = parseFloat(this.element.getAttribute("y_offset")) || 0.0
+        this.config.fov = parseFloat(this.element.getAttribute("fov"))           || 70
+        this.config.animation = this.element.getAttribute("animation")
+        this.config.duration = parseFloat(this.element.getAttribute("duration")) || 4.0
+        this.config.delay = parseFloat(this.element.getAttribute("delay"))       || 1.0
     }
+
     _setup3D() {
         const renderer = this._renderer = new THREE.WebGLRenderer({antialias: true})
         renderer.setSize(this.canvas.width, this.canvas.height)
@@ -63,9 +67,10 @@ export default class App {
         renderer.setClearColor(0xe0e0e0)
 
         this._scene = new THREE.Scene()
-        this._camera = new THREE.PerspectiveCamera(70, this.canvas.width / this.canvas.height, NEAR, FAR)
-        this._camera.position.y = 4
-        this._camera.position.z = 32
+        this._camera = new THREE.PerspectiveCamera(this.config.fov, this.canvas.width / this.canvas.height, NEAR, FAR)
+        this._camera.position.x = 0.0 + this.config.x_offset
+        this._camera.position.y = 6.0 + this.config.y_offset
+        this._camera.position.z = (32 / this.config.zoom)
     }
 
     _setupDOM() {
@@ -78,19 +83,6 @@ export default class App {
 
         this.frame = 0
         this.prev_frame = -1
-
-        this.wave.dimensions = [WAVE_DIM, WAVE_DIM]
-        let wd = this.wave.dimensions
-        let geometry = new THREE.PlaneGeometry( wd[0]*4, wd[1]*4, wd[0] , wd[1] )
-        geometry.dynamic = true
-        geometry.__dirtyVertices = true
-
-        this.wave.material = new THREE.MeshBasicMaterial({
-            color: 0xff1111,
-            wireframeLinewidth: 2,
-            wireframe: true,
-            side: THREE.DoubleSide
-        })
 
         this.primary.material = new THREE.ShaderMaterial({
             wireframeLinewidth: 1,
@@ -108,33 +100,15 @@ export default class App {
             }
         })
 
-        // waves mesh
-        let mesh = new THREE.Mesh(geometry, this.wave.material)
-        mesh.rotation.x = Math.PI / 2
-        mesh.rotation.z += 1
-        this.wave.mesh = mesh
-        scene.add(mesh)
-        ////////
         this._loadSVG()
+        let anim = new Animate(this.primary.material, "explode")
+        anim.play()
     }
 
     _update(dt) {
         this._time += dt
 
-        let wave = function(x, y, offset) {
-            return 0.5 * ( 0.4 * Math.sin((y / 16) + offset) + Math.sin((x / 2.3) + (-0.4 * offset))
-                + Math.sin((x / 4) + offset) + Math.sin((y / 2.8) + offset))
-        }
-        let dimensions = this.wave.dimensions
-        this.wave.mesh.geometry.dynamic = true
-        this.wave.mesh.geometry.vertices.forEach((elem, index) => {
-            let offset = this._time
-            elem.xi = Math.floor(index / (dimensions[1] + 1))
-            elem.yi = Math.floor(index % (dimensions[0] + 1))
-            elem.z = wave(elem.xi, elem.yi, offset)
-        })
-        this.wave.mesh.rotation.z += 0.001
-        this.wave.mesh.geometry.verticesNeedUpdate = true
+
     }
 
     _render(timestamp) {
@@ -166,7 +140,7 @@ export default class App {
         var self = this
         this.svg_loaded = false
         // load default SVG asychronously 
-        loadSvg(this.params.svg, function (err, svg) {
+        loadSvg(this.config.svg, function (err, svg) {
             if (err) throw err
             load(svg)
         })

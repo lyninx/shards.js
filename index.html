@@ -10,11 +10,27 @@
     <title>shards.js</title>
 </head>
 <body>
+    <div class="main">
     <h2>shards.js</h2>
     <shards-canvas 
     	class="shards" 
     	svg="./lyninx.svg" 
+        color="#f00"
+        background="#444"
+        zoom=2.0
+        x_offset=0.0
+        y_offset=0.0
+        fov=70
+        animation="explode"
+        duration=6.0
+        delay=22.0
     ></shards-canvas>
+
+    <h4>making webGL shaders accessible through web components</h4>
+    <div class="content">
+    hello world
+    </div>
+    </div>
     <!--      -->
     <script src="ext/custom-elements-shim.js"></script>
     <script src="ext/custom-elements.min.js"></script>
