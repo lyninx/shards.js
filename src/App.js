@@ -18,18 +18,18 @@ let prev_frame = 0.0
 let time = 0.0
 
 import Animate from './Animate.js'
+import Layer from './Layer.js'
 import util from './Util.js'
 
 export default class App {
     constructor(domElement) {
         this.wave = {}
-        this.primary = {}
         this.canvas = {}
         this.element = domElement
 
         this.config = {}
 
-        this._bind('_render', '_handleResize', '_loadSVG', '_update')
+        this._bind('_render', '_handleResize', '_update')
         this._time = 0.0
         this._configure()
         this._setup3D()
@@ -84,24 +84,12 @@ export default class App {
         this.frame = 0
         this.prev_frame = -1
 
-        this.primary.material = new THREE.ShaderMaterial({
-            wireframeLinewidth: 1,
-            vertexShader: vertShader,
-            fragmentShader: fragShader,
-            wireframe: false,
-            visible: true,
-            transparent: true,
-            side: THREE.DoubleSide,
-            uniforms: {
-                color: { value: new THREE.Color( 0xff2200 )},
-                opacity: { type: 'f', value: 1 },
-                scale: { type: 'f', value: 1 },
-                animate: { type: 'f', value: 1 }
-            }
+        let l1 = new Layer("svg", { src: "./lyninx.svg"}, () => {
+            console.log(l1)
+            scene.add(l1.mesh)
         })
-
-        this._loadSVG()
-        let anim = new Animate(this.primary.material, "explode",this.config.duration, this.config.delay)
+        
+        let anim = new Animate(l1.material, "explode",this.config.duration, this.config.delay)
         anim.play()
     }
 
@@ -133,38 +121,5 @@ export default class App {
         camera.aspect = canvas.clientWidth / canvas.clientHeight
         camera.updateProjectionMatrix()
         renderer.setSize(canvas.clientWidth, canvas.clientHeight)
-    }
-
-    // load svg 
-    _loadSVG() {
-        var self = this
-        this.svg_loaded = false
-        // load default SVG asychronously 
-        loadSvg(this.config.svg, function (err, svg) {
-            if (err) throw err
-            load(svg)
-        })
-        // load svg into scene
-        function load(svg){
-            let svgPath = parsePath(svg)
-            let complex = svgMesh(svgPath, { delaunay: false, scale: 20, randomization: 0 })
-            complex = reindex(unindex(complex.positions, complex.cells))
-            let svg_geometry = new createGeom(complex)
-            let buffer_geometry = new THREE.BufferGeometry().fromGeometry(svg_geometry)
-            let attributes = util.getAnimationAttributes(complex.positions, complex.cells)
-            buffer_geometry.addAttribute('direction', attributes.direction)
-            buffer_geometry.addAttribute('centroid', attributes.centroid)          
-            svg_geometry.dispose()
-            let mesh = new THREE.Mesh(buffer_geometry, self.primary.material)
-            mesh.scale.set( 16, 16, 16 )
-            mesh.name = "primary"
-            self.svg_loaded = true
-            mesh.position.y += 6
-            self._scene.add(mesh)
-            console.log()
-        }
-        function clearSVG(){
-            self._scene.remove(self._scene.children[1])
-        }
     }
 }
