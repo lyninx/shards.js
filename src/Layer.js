@@ -59,7 +59,7 @@ export default class Layer {
         return new Promise((resolve, reject) => {
             let self = this
             // load default SVG asychronously 
-            loadSvg(this.params.src, function (err, svg) {
+            loadSvg(this.params.svg, function (err, svg) {
                 if (err) reject(err)
                 let mesh = generate_mesh(svg)
                 resolve(mesh)

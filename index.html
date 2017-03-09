@@ -14,7 +14,7 @@
 <body>
     <div class="main">
     <h2>shards.js</h2>
-    <shards-canvas class="shards" svg="./lyninx.svg" background="#80c0c0" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70>
+    <shards-canvas class="shards" svg="./lyninx.svg" background="#ff5454" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70>
     	<svg-layer src="./lyninx.svg" color="#fff" z_depth="0.0" scale="1.0" animation="explode" duration="4.0" delay="1.0">
     </shards-canvas>
     <pre><code class="html" id="example"></code></pre>
@@ -24,9 +24,10 @@
     </div>
     <!--      -->
     <script>
+    var example = '<shards-canvas class="shards" background="#ff5454" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70><svg-layer src="./lyninx.svg" color="#fff" z_depth="0.0" scale="1.0" animation="explode" duration="4.0" delay="1.0"> </shards-canvas>'
     hljs.initHighlightingOnLoad()
-    example_html = document.createTextNode('<shards-canvas svg="./lyninx.svg" color="#fff" background="#80c0c0" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70 animation="explode" duration=4.0 delay=1.0></shards-canvas>')
-    document.getElementById("example").appendChild(example_html)
+    html = document.createTextNode(hljs.fixMarkup(example))
+    document.getElementById("example").appendChild(html)
     </script>
     <script src="ext/custom-elements-shim.js"></script>
     <script src="ext/custom-elements.min.js"></script>

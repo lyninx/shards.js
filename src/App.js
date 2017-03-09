@@ -23,10 +23,9 @@ import util from './Util.js'
 
 export default class App {
     constructor(domElement) {
-        this.wave = {}
+        this.layers = []
         this.canvas = {}
         this.element = domElement
-
         this.config = {}
 
         this._bind('_render', '_handleResize', '_update')
@@ -48,16 +47,27 @@ export default class App {
         this.canvas.width = this.element.clientWidth
         this.canvas.height = this.element.clientHeight
         
-        this.config.svg = this.element.getAttribute("svg")                       || ""
-        this.config.color = this.element.getAttribute("color")                   || "#000"
-        this.config.background = this.element.getAttribute("background")         || "fff"
+        this.config.background = this.element.getAttribute("background")         || "#000"
         this.config.zoom = parseFloat(this.element.getAttribute("zoom"))         || 1.0
         this.config.x_offset = parseFloat(this.element.getAttribute("x_offset")) || 0.0
         this.config.y_offset = parseFloat(this.element.getAttribute("y_offset")) || 0.0
         this.config.fov = parseFloat(this.element.getAttribute("fov"))           || 70
-        this.config.animation = this.element.getAttribute("animation")
-        this.config.duration = parseFloat(this.element.getAttribute("duration")) || 4.0
-        this.config.delay = parseFloat(this.element.getAttribute("delay"))       || 1.0
+
+        let children = [].slice.call(this.element.children)
+        children.forEach((elem) => {
+            let config = {}
+            config.svg = elem.getAttribute("src")
+            config.color = elem.getAttribute("color") || "#fff"
+            config.z_depth = elem.getAttribute("z_depth") || 0.0
+            config.scale = elem.getAttribute("scale") || 1.0
+            config.animation = elem.getAttribute("animation")
+            config.duration = parseFloat(elem.getAttribute("duration")) || 4.0
+            config.delay = parseFloat(elem.getAttribute("delay")) || 1.0
+            this.layers.push({
+                tag: elem.tagName.toLowerCase(),
+                params: config
+            })
+        })
     }
 
     _setup3D() {
@@ -84,13 +94,17 @@ export default class App {
         this.frame = 0
         this.prev_frame = -1
 
-        let l1 = new Layer("svg", { src: "./lyninx.svg"}, () => {
-            console.log(l1)
-            scene.add(l1.mesh)
+        this.layers.forEach((l) => {
+            let layer = new Layer(l.tag, l.params, () => {
+                // mesh loaded into scene
+                console.log("> loaded "+l.tag)
+                scene.add(layer.mesh)
+                // start layer animation
+                let anim = new Animate(layer.material, l.params.animation, l.params.duration, l.params.delay)
+                anim.play()
+            })
         })
-        
-        let anim = new Animate(l1.material, "explode",this.config.duration, this.config.delay)
-        anim.play()
+    
     }
 
     _update(dt) {
