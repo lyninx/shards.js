@@ -22,15 +22,16 @@ import Layer from './Layer.js'
 import util from './Util.js'
 
 export default class App {
-    constructor(domElement) {
-        this.layers = []
+    constructor(domElement, shadow) {
         this.canvas = {}
         this.element = domElement
+        this.shadow = shadow
         this.config = {}
 
-        this._bind('_render', '_handleResize', '_update')
+        this._bind('_render', '_handleResize', '_update', '_configure', '_configure_layers', '_setupDOM')
         this._time = 0.0
         this._configure()
+        this._configure_layers()
         this._setup3D()
         this._setupDOM()
         this._createScene()      
@@ -52,7 +53,10 @@ export default class App {
         this.config.x_offset = parseFloat(this.element.getAttribute("x_offset")) || 0.0
         this.config.y_offset = parseFloat(this.element.getAttribute("y_offset")) || 0.0
         this.config.fov = parseFloat(this.element.getAttribute("fov"))           || 70
+    }
 
+    _configure_layers() {
+        this.layers = []
         let children = [].slice.call(this.element.children)
         children.forEach((elem) => {
             let config = {}
@@ -84,8 +88,26 @@ export default class App {
     }
 
     _setupDOM() {
-        elementResize(this.element, this._handleResize)
-        this.element.appendChild(this._renderer.domElement)
+        // elementResize(this.element, this._handleResize)
+        let self = this
+        this.mutation_observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type == "attributes") {
+                    console.log("attributes changed")
+                    self._configure()
+                    self._camera.position.x = 0.0 + self.config.x_offset
+                    self._camera.position.y = 6.0 + self.config.y_offset
+                    self._camera.position.z = (32 / self.config.zoom)
+                }
+            })
+        })
+        observer.observe(this.element, {
+            attributes: true 
+        })
+        window.addEventListener('resize', this._handleResize)
+        this.element.addEventListener('resize', this._handleResize)
+        this.shadow.appendChild(this._renderer.domElement)
     }
 
     _createScene() {
