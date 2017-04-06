@@ -1,25 +1,23 @@
-const three             = require('three')
-const reindex           = require('mesh-reindex')
-const unindex           = require('unindex-mesh')
-const loadSvg           = require('load-svg')
-const parsePath         = require('extract-svg-path').parse
-const svgMesh           = require('svg-mesh-3d')
-const elementResize     = require('element-resize-event')
-const createGeom        = require('three-simplicial-complex')(THREE)
-const vertShader        = require('./shaders/vertex.glsl')
-const fragShader        = require('./shaders/fragment.glsl')
+import three from 'three'
+import reindex from 'mesh-reindex'
+import unindex from 'unindex-mesh'
+import loadSvg from 'load-svg'
+import { parse as parsePath } from 'extract-svg-path'
+import svgMesh from 'svg-mesh-3d'
+import elementResize from 'element-resize-event'
+import createGeom from 'three-simplicial-complex'
+import vertShader from './shaders/vertex.glsl'
+import fragShader from './shaders/fragment.glsl'
+import Animate from './Animate.js'
+import Layer from './Layer.js'
+import util from './Util.js'
 
 const NEAR = 0.1
 const FAR = 2000
-const TIMELINE_LENGTH = 256
 const WAVE_DIM = 16
 
 let prev_frame = 0.0
 let time = 0.0
-
-import Animate from './Animate.js'
-import Layer from './Layer.js'
-import util from './Util.js'
 
 export default class App {
     constructor(domElement, shadow) {
@@ -68,6 +66,7 @@ export default class App {
             config.duration = parseFloat(elem.getAttribute("duration")) || 4.0
             config.delay = parseFloat(elem.getAttribute("delay")) || 1.0
             this.layers.push({
+                elem: elem,
                 tag: elem.tagName.toLowerCase(),
                 params: config
             })
@@ -96,16 +95,37 @@ export default class App {
                 if (mutation.type == "attributes") {
                     console.log("attributes changed")
                     self._configure()
+                    self._camera = new THREE.PerspectiveCamera(self.config.fov, self.canvas.width / self.canvas.height, NEAR, FAR)
                     self._camera.position.x = 0.0 + self.config.x_offset
                     self._camera.position.y = 6.0 + self.config.y_offset
                     self._camera.position.z = (32 / self.config.zoom)
+                    self._renderer.setClearColor(self.config.background)
+                    console.log(self._camera)
                 }
             })
         })
         observer.observe(this.element, {
             attributes: true 
         })
+        let children = [].slice.call(this.element.children)
+        children.forEach((e) => {
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type == "attributes") {
+                        console.log("child attributes changed")
+                        const meow = self.layers.find((layer) => {
+                            return layer.elem === e
+                        })
+                        console.log(meow)
+                    }
+                })
+            })
+            observer.observe(e, {
+                attributes: true 
+            })
+        })
         window.addEventListener('resize', this._handleResize)
+
         this.element.addEventListener('resize', this._handleResize)
         this.shadow.appendChild(this._renderer.domElement)
     }
