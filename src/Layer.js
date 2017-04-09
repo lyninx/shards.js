@@ -1,14 +1,14 @@
-const three             = require('three')
-const reindex           = require('mesh-reindex')
-const unindex           = require('unindex-mesh')
-const loadSvg           = require('load-svg')
-const parsePath         = require('extract-svg-path').parse
-const svgMesh           = require('svg-mesh-3d')
-const elementResize     = require('element-resize-event')
-const createGeom        = require('three-simplicial-complex')(THREE)
-const vertShader        = require('./shaders/vertex.glsl')
-const fragShader        = require('./shaders/fragment.glsl')
-
+import three from 'three'
+import reindex from 'mesh-reindex'
+import unindex from 'unindex-mesh'
+import loadSvg from 'load-svg'
+import { parse as parsePath } from 'extract-svg-path'
+import svgMesh from 'svg-mesh-3d'
+import elementResize from 'element-resize-event'
+import threeSimplicialComplex from 'three-simplicial-complex'
+import vertShader from './shaders/vertex.glsl'
+import fragShader from './shaders/fragment.glsl'
+import Animate from './Animate.js'
 import util from './Util.js'
 
 export default class Layer {
@@ -19,7 +19,7 @@ export default class Layer {
         this.material = undefined
         this.ready = ready
 
-        this._bind('_loadSVG')
+        this._bind('_create', '_loadSVG', '_update')
         this._create() 
     }
 
@@ -49,10 +49,22 @@ export default class Layer {
             this.mesh = mesh
             this.ready.call()
         })
-        //let anim = new Animate(this.primary.material, "explode",this.config.duration, this.config.delay)
-        //anim.play()
+        this.animation = new Animate(this.material, this.params.animation, this.params.duration, this.params.delay)
+        this.animation.play()
     }
 
+    _update(params, ready) {
+        console.log(params)
+        this.params = params
+        this._loadSVG().then((mesh) => {
+            this.mesh = mesh
+            this.animation.stop()
+            this.animation = new Animate(this.material, this.params.animation, this.params.duration, this.params.delay)
+            this.animation.play()
+            ready(this)
+        })
+
+    }
 
     // load svg 
     _loadSVG() {
@@ -69,7 +81,7 @@ export default class Layer {
                 let svgPath = parsePath(svg)
                 let complex = svgMesh(svgPath, { delaunay: false, scale: 20, randomization: 0 })
                 complex = reindex(unindex(complex.positions, complex.cells))
-
+                const createGeom = threeSimplicialComplex(THREE)
                 let svg_geometry = new createGeom(complex)
                 let buffer_geometry = new THREE.BufferGeometry().fromGeometry(svg_geometry)
                 let attributes = util.getAnimationAttributes(complex.positions, complex.cells)
@@ -78,8 +90,9 @@ export default class Layer {
                 svg_geometry.dispose()
 
                 let mesh = new THREE.Mesh(buffer_geometry, self.material)
-                mesh.scale.set( 16, 16, 16 )
-                mesh.name = "primary"
+                let scale = 16 * self.params.scale
+                mesh.scale.set( scale, scale, scale )
+                mesh.name = self.params.svg
                 mesh.position.y += 6
 
                 return mesh

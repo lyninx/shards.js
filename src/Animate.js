@@ -8,6 +8,7 @@ export default class Animate {
 		this.animation = animation
 		this.material = material
 		this._bind('play', 'explode')
+		this.enabled = true
 
 	}
 
@@ -25,39 +26,35 @@ export default class Animate {
 				this.implode(this.duration)
 				this.animation = "explode"
 				break
-			default: console.log("invalid animation")
+			default: console.warn("invalid animation parameter")
 		}
 	}
 
+	stop() {
+		this.enabled = false
+		this.tween.cancel()
+		this.material.uniforms.animate.value = 1.0
+	}
+
 	explode(dur, delay = 0){
-		tweenr.to(this.material.uniforms.animate, {
+		this.tween = tweenr.to(this.material.uniforms.animate, {
 			duration: dur, 
 			value: 0, 
 			delay: delay, 
 			ease: 'circOut'
-		})
-		tweenr.to(this.material.uniforms.scale, {
-			duration: dur, 
-			value: 0, 
-			delay: delay
 		}).on('complete', () => {
-			this.play()
+			if (this.enabled) this.play()
 		})
 	}
 
 	implode(material, delay = 0) {
-		tweenr.to(this.material.uniforms.animate, {
+		this.tween = tweenr.to(this.material.uniforms.animate, {
 			duration: 2.0, 
 			value: 1, 
 			delay: delay, 
 			ease: 'quadInOut'
-		})
-		tweenr.to(this.material.uniforms.scale, {
-			duration: 2.0, 
-			value: 1, 
-			delay: delay
 		}).on('complete', () => {
-			this.play()
+			if (this.enabled) this.play()
 		})
 	}
 }

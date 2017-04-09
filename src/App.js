@@ -1,13 +1,4 @@
 import three from 'three'
-import reindex from 'mesh-reindex'
-import unindex from 'unindex-mesh'
-import loadSvg from 'load-svg'
-import { parse as parsePath } from 'extract-svg-path'
-import svgMesh from 'svg-mesh-3d'
-import elementResize from 'element-resize-event'
-import createGeom from 'three-simplicial-complex'
-import vertShader from './shaders/vertex.glsl'
-import fragShader from './shaders/fragment.glsl'
 import Animate from './Animate.js'
 import Layer from './Layer.js'
 import util from './Util.js'
@@ -26,10 +17,10 @@ export default class App {
         this.shadow = shadow
         this.config = {}
 
-        this._bind('_render', '_handleResize', '_update', '_configure', '_configure_layers', '_setupDOM')
+        this._bind('_render', '_handleResize', '_update', '_create', '_create_layers', '_setupDOM')
         this._time = 0.0
-        this._configure()
-        this._configure_layers()
+        this._create()
+        this._create_layers()
         this._setup3D()
         this._setupDOM()
         this._createScene()      
@@ -42,7 +33,7 @@ export default class App {
     _bind(...methods) {
         methods.forEach((method) => this[method] = this[method].bind(this))
     }
-    _configure() {
+    _create() {
         this.canvas.width = this.element.clientWidth
         this.canvas.height = this.element.clientHeight
         
@@ -53,24 +44,29 @@ export default class App {
         this.config.fov = parseFloat(this.element.getAttribute("fov"))           || 70
     }
 
-    _configure_layers() {
+    _create_layers() {
         this.layers = []
         let children = [].slice.call(this.element.children)
         children.forEach((elem) => {
-            let config = {}
-            config.svg = elem.getAttribute("src")
-            config.color = elem.getAttribute("color") || "#fff"
-            config.z_depth = elem.getAttribute("z_depth") || 0.0
-            config.scale = elem.getAttribute("scale") || 1.0
-            config.animation = elem.getAttribute("animation")
-            config.duration = parseFloat(elem.getAttribute("duration")) || 4.0
-            config.delay = parseFloat(elem.getAttribute("delay")) || 1.0
+            let params = this._get_layer_params(elem)
             this.layers.push({
                 elem: elem,
                 tag: elem.tagName.toLowerCase(),
-                params: config
+                params: params
             })
         })
+    }
+
+    _get_layer_params(elem) {
+        let params = {}
+        params.svg = elem.getAttribute("src")
+        params.color = elem.getAttribute("color") || "#fff"
+        params.z_depth = elem.getAttribute("z_depth") || 0.0
+        params.scale = elem.getAttribute("scale") || 1.0
+        params.animation = elem.getAttribute("animation")
+        params.duration = parseFloat(elem.getAttribute("duration")) || 4.0
+        params.delay = parseFloat(elem.getAttribute("delay")) || 1.0
+        return params
     }
 
     _setup3D() {
@@ -94,29 +90,35 @@ export default class App {
             mutations.forEach(function(mutation) {
                 if (mutation.type == "attributes") {
                     console.log("attributes changed")
-                    self._configure()
+                    self._create()
                     self._camera = new THREE.PerspectiveCamera(self.config.fov, self.canvas.width / self.canvas.height, NEAR, FAR)
                     self._camera.position.x = 0.0 + self.config.x_offset
                     self._camera.position.y = 6.0 + self.config.y_offset
                     self._camera.position.z = (32 / self.config.zoom)
                     self._renderer.setClearColor(self.config.background)
-                    console.log(self._camera)
                 }
             })
         })
         observer.observe(this.element, {
             attributes: true 
         })
+
         let children = [].slice.call(this.element.children)
         children.forEach((e) => {
             var observer = new MutationObserver(function(mutations) {
                 mutations.forEach(function(mutation) {
                     if (mutation.type == "attributes") {
                         console.log("child attributes changed")
-                        const meow = self.layers.find((layer) => {
+                        let modified_layer = self.layers.find((layer) => {
                             return layer.elem === e
                         })
-                        console.log(meow)
+                        modified_layer.elem = e
+                        modified_layer.params = self._get_layer_params(e)
+                        self._scene.remove(modified_layer.mesh)
+                        modified_layer.layer._update(modified_layer.params, (updated_layer) => {
+                            modified_layer.mesh = updated_layer.mesh
+                            self._scene.add(updated_layer.mesh)   
+                        })
                     }
                 })
             })
@@ -137,13 +139,12 @@ export default class App {
         this.prev_frame = -1
 
         this.layers.forEach((l) => {
-            let layer = new Layer(l.tag, l.params, () => {
+            let layer = l.layer = new Layer(l.tag, l.params, () => {
                 // mesh loaded into scene
                 console.log("> loaded "+l.tag)
                 scene.add(layer.mesh)
+                l.mesh = layer.mesh
                 // start layer animation
-                let anim = new Animate(layer.material, l.params.animation, l.params.duration, l.params.delay)
-                anim.play()
             })
         })
     
