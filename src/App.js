@@ -64,8 +64,8 @@ export default class App {
         params.z_depth = elem.getAttribute("z_depth") || 0.0
         params.scale = elem.getAttribute("scale") || 1.0
         params.animation = elem.getAttribute("animation")
-        params.duration = parseFloat(elem.getAttribute("duration")) || 4.0
-        params.delay = parseFloat(elem.getAttribute("delay")) || 1.0
+        params.duration = parseFloat(elem.getAttribute("duration")) || 0.0
+        params.delay = parseFloat(elem.getAttribute("delay")) || 0.0
         return params
     }
 

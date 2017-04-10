@@ -38,19 +38,21 @@ export default class Layer {
             transparent: true,
             side: THREE.DoubleSide,
             uniforms: {
-                color: { value: new THREE.Color( 0xff2200 )},
+                color: { value: new THREE.Color( this.params.color )},
                 opacity: { type: 'f', value: 1 },
                 scale: { type: 'f', value: 1 },
-                animate: { type: 'f', value: 1 }
+                animate: { type: 'f', value: 1 },
+                spin: { type: 'f', value: 1 }
             }
         })
 
         this._loadSVG().then((mesh) => {
             this.mesh = mesh
             this.ready.call()
+            this.animation = new Animate(this.material, this.mesh, this.params.animation, this.params.duration, this.params.delay)
+            this.animation.play()
+            console.log("hello")
         })
-        this.animation = new Animate(this.material, this.params.animation, this.params.duration, this.params.delay)
-        this.animation.play()
     }
 
     _update(params, ready) {
@@ -59,7 +61,8 @@ export default class Layer {
         this._loadSVG().then((mesh) => {
             this.mesh = mesh
             this.animation.stop()
-            this.animation = new Animate(this.material, this.params.animation, this.params.duration, this.params.delay)
+            this.material.uniforms.color.value = new THREE.Color(this.params.color)
+            this.animation = new Animate(this.material, this.mesh, this.params.animation, this.params.duration, this.params.delay)
             this.animation.play()
             ready(this)
         })

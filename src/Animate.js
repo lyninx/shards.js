@@ -2,14 +2,15 @@ const Tweenr 	= require('tweenr')
 const tweenr = Tweenr({ defaultEase: 'expoOut' })
 
 export default class Animate {
-	constructor(material, animation, duration = 4.0, delay = 1.0) {
+	constructor(material, mesh, animation, duration = 4.0, delay = 1.0) {
 		this.duration = duration
 		this.delay = delay
 		this.animation = animation
+		this.mesh = mesh
 		this.material = material
 		this._bind('play', 'explode')
 		this.enabled = true
-
+		console.log(this)
 	}
 
 	_bind(...methods) {
@@ -18,6 +19,9 @@ export default class Animate {
 
 	play() {
 		switch(this.animation) {
+			case "spin":
+				this.spin(this.duration, this.delay)
+				break
 			case "explode": 
 				this.explode(this.duration, this.delay)
 				this.animation = "implode"
@@ -34,6 +38,20 @@ export default class Animate {
 		this.enabled = false
 		this.tween.cancel()
 		this.material.uniforms.animate.value = 1.0
+	}
+
+	spin(dur, delay=0){
+		console.log(delay)
+		console.log(this.material.uniforms.spin)
+		this.tween = tweenr.to(this.material.uniforms.spin, {
+			duration: dur, 
+			value: 0, 
+			delay: delay, 
+			ease: 'linear'
+		}).on('complete', () => {
+			this.material.uniforms.spin.value = 1.0;
+			if (this.enabled) this.play()
+		})
 	}
 
 	explode(dur, delay = 0){
