@@ -34,11 +34,10 @@ void main() {
   );
   
   vec3 offset = mix(vec3(0.0), direction.xyz * rotMat, 1.0 - animate);
+  vec3 spin = position.xyz * rotMat3;
   // scale triangles to their centroids
-  vec3 tPos = mix(mix(centroid.xyz, position.xyz, scale), position.xyz * rotMat2, 1.0 - animate) + offset;
-
-  vec3 mPos = position.xyz * rotMat3;
-  vec3 pos = mix(tPos, mPos, animate);
+  vec3 tPos = mix(mix(centroid.xyz, spin, animate), spin * rotMat2, 1.0 - animate) + offset;
+  vec3 pos = tPos;
   
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }

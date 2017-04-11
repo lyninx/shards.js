@@ -19,6 +19,16 @@ export default class Animate {
 
 	play() {
 		switch(this.animation) {
+			case "fade-in":
+				this.material.uniforms.opacity.value = 0.0;
+				this.fade_in(this.duration, this.delay)
+				this.animation = "fade-out"
+				break
+			case "fade-out":
+				this.material.uniforms.opacity.value = 1.0;
+				this.fade_out(this.duration, this.delay)
+				this.animation = "fade-in"
+				break
 			case "spin":
 				this.spin(this.duration, this.delay)
 				break
@@ -39,10 +49,27 @@ export default class Animate {
 		this.tween.cancel()
 		this.material.uniforms.animate.value = 1.0
 	}
-
+	fade_in(dur, delay=0){
+		this.tween = tweenr.to(this.material.uniforms.opacity, {
+			duration: dur, 
+			value: 1, 
+			delay: delay, 
+			ease: 'linear'
+		}).on('complete', () => {
+			if (this.enabled) this.play()
+		})
+	}
+	fade_out(dur, delay=0){
+		this.tween = tweenr.to(this.material.uniforms.opacity, {
+			duration: dur, 
+			value: 0, 
+			delay: delay, 
+			ease: 'linear'
+		}).on('complete', () => {
+			if (this.enabled) this.play()
+		})
+	}
 	spin(dur, delay=0){
-		console.log(delay)
-		console.log(this.material.uniforms.spin)
 		this.tween = tweenr.to(this.material.uniforms.spin, {
 			duration: dur, 
 			value: 0, 
