@@ -15,7 +15,9 @@
     <div class="main">
     <h2>shards.js</h2>
     <shards-canvas class="shards" background="#ff5454" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70>
-    	<svg-layer src="./lyninx_inkscape.svg" color="#fff" z_depth="0.0" scale="1.0" animation="spin" duration="4.0" delay="0.0"></svg-layer>
+    	<svg-layer src="./lyninx_inkscape.svg" color="#fff" z_depth="0.0" scale="1.0">
+        <animation type="explode" duration="4.0" delay="0.0" looping="true"></animation>
+      </svg-layer>
     </shards-canvas>
     <pre><code class="html" id="example"></code></pre>
     <div class="content card">

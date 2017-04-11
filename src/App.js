@@ -63,9 +63,17 @@ export default class App {
         params.color = elem.getAttribute("color") || "#fff"
         params.z_depth = elem.getAttribute("z_depth") || 0.0
         params.scale = elem.getAttribute("scale") || 1.0
-        params.animation = elem.getAttribute("animation")
-        params.duration = parseFloat(elem.getAttribute("duration")) || 0.0
-        params.delay = parseFloat(elem.getAttribute("delay")) || 0.0
+        params.animations = []
+        let children = [].slice.call(elem.children)
+        children.forEach((elem) => {
+            // any tag name works
+            let anim = {}
+            anim.type = elem.getAttribute("type")
+            anim.duration = elem.getAttribute("duration")
+            anim.delay = elem.getAttribute("delay")
+            anim.looping = elem.getAttribute("looping") || false
+            params.animations.push(anim)
+        })
         return params
     }
 
@@ -144,7 +152,6 @@ export default class App {
                 console.log("> loaded "+l.tag)
                 scene.add(layer.mesh)
                 l.mesh = layer.mesh
-                // start layer animation
             })
         })
     

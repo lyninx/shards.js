@@ -3,8 +3,8 @@ const tweenr = Tweenr({ defaultEase: 'expoOut' })
 
 export default class Animate {
 	constructor(material, mesh, animation, duration = 4.0, delay = 1.0) {
-		this.duration = duration
-		this.delay = delay
+		this.duration = parseFloat(duration)
+		this.delay = parseFloat(delay)
 		this.animation = animation
 		this.mesh = mesh
 		this.material = material
