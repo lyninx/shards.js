@@ -84,14 +84,10 @@
 		_createClass(WebGLComposerElement, [{
 			key: 'connectedCallback',
 			value: function connectedCallback() {
-				console.log("CONNECTED");
 				this.style.display = "block";
 				this.app = new _App2.default(this, this.shadow);
 				this.app.start();
 			}
-		}, {
-			key: 'connectedLayer',
-			value: function connectedLayer() {}
 		}]);
 	
 		return WebGLComposerElement;
@@ -99,6 +95,13 @@
 	
 	var LayerElement = function (_HTMLElement2) {
 		_inherits(LayerElement, _HTMLElement2);
+	
+		_createClass(LayerElement, null, [{
+			key: 'observedAttributes',
+			get: function get() {
+				return ['src', 'color', 'z_depth', 'scale'];
+			}
+		}]);
 	
 		function LayerElement() {
 			_classCallCheck(this, LayerElement);
@@ -109,8 +112,20 @@
 		_createClass(LayerElement, [{
 			key: 'connectedCallback',
 			value: function connectedCallback() {
-				this.parentNode.app._init_layers();
+				console.log("CONNECTED CALLBACK");
 				this.app = this.parentNode.app;
+				this.app._create_layer(this);
+			}
+		}, {
+			key: 'attributeChangedCallback',
+			value: function attributeChangedCallback(attribute, oldValue, newValue) {
+				this.parentNode.app._update_layer(this, attribute, newValue);
+			}
+		}, {
+			key: 'disconnectedCallback',
+			value: function disconnectedCallback() {
+				console.log("DISCONNECT");
+				this.app._remove_layer(this);
 			}
 		}]);
 	
@@ -136,7 +151,7 @@
 		_createClass(AnimationElement, [{
 			key: 'connectedCallback',
 			value: function connectedCallback() {
-				this.parentNode.app._observe_animations(this);
+				//this.parentNode.app._observe_animations(this)
 			}
 		}]);
 	
@@ -194,8 +209,9 @@
 	        this.element = domElement;
 	        this.shadow = shadow;
 	        this.config = {};
+	        this.layers = [];
 	
-	        this._bind('_render', '_handleResize', '_update', '_create', '_create_layers', '_init_layers', '_setupDOM');
+	        this._bind('_render', '_handleResize', '_update', '_create', '_create_layer', '_update_layer', '_setupDOM');
 	        this._time = 0.0;
 	        this._create();
 	        this._setup3D();
@@ -239,41 +255,60 @@
 	            return this.layers;
 	        }
 	    }, {
-	        key: '_init_layers',
-	        value: function _init_layers() {
-	            this._create_layers();
-	            this._observe_layers();
-	        }
-	    }, {
-	        key: '_create_layers',
-	        value: function _create_layers() {
+	        key: '_create_layer',
+	        value: function _create_layer(elem) {
 	            var _this2 = this;
 	
-	            this.layers = [];
-	            var children = [].slice.call(this.element.children);
-	            // wow. this need refactoring
-	            children.forEach(function (elem) {
-	                var params = _this2._get_layer_params(elem);
+	            var params = this._get_layer_params(elem);
+	            var tag = elem.tagName.toLowerCase();
+	            var layer = new _Layer2.default(tag, params, function (layer) {
+	                _this2._scene.add(layer.mesh);
 	                _this2.layers.push({
 	                    elem: elem,
-	                    tag: elem.tagName.toLowerCase(),
-	                    params: params
+	                    tag: tag,
+	                    params: params,
+	                    layer: layer,
+	                    mesh: layer.mesh
 	                });
 	            });
-	            this.layers.forEach(function (l) {
-	                var layer = l.layer = new _Layer2.default(l.tag, l.params, function () {
-	                    // mesh loaded into scene
-	                    console.log("> loaded " + l.tag);
-	                    _this2._scene.add(layer.mesh);
-	                    l.mesh = layer.mesh;
-	                });
+	        }
+	    }, {
+	        key: '_update_layer',
+	        value: function _update_layer(elem, attribute, value) {
+	            var _this3 = this;
+	
+	            var modified = this.layers.find(function (layer) {
+	                return layer.elem == elem;
 	            });
+	            if (modified) {
+	                modified.params[attribute] = value;
+	                var old_mesh = modified.mesh;
+	                this._scene.remove(old_mesh);
+	                modified.layer._update(modified.params, function (updated_layer) {
+	                    console.log("updated layer params");
+	                    _this3._scene.add(updated_layer.mesh);
+	                    modified.mesh = updated_layer.mesh;
+	                });
+	            }
+	        }
+	    }, {
+	        key: '_remove_layer',
+	        value: function _remove_layer(elem) {
+	            var scene = this._scene;
+	            var removed = this.layers.find(function (layer) {
+	                return layer.elem == elem;
+	            });
+	            scene.remove(removed.mesh);
+	            this.layers = this.layers.filter(function (item) {
+	                return item != removed;
+	            });
+	            removed.layer._destory();
 	        }
 	    }, {
 	        key: '_get_layer_params',
 	        value: function _get_layer_params(elem) {
 	            var params = {};
-	            params.svg = elem.getAttribute("src");
+	            params.src = elem.getAttribute("src");
 	            params.color = elem.getAttribute("color") || "#fff";
 	            params.z_depth = elem.getAttribute("z_depth") || 0.0;
 	            params.scale = elem.getAttribute("scale") || 1.0;
@@ -329,60 +364,6 @@
 	
 	            this.element.addEventListener('resize', this._handleResize);
 	            this.shadow.appendChild(this._renderer.domElement);
-	        }
-	    }, {
-	        key: '_observe_layers',
-	        value: function _observe_layers() {
-	            var self = this;
-	            var children = [].slice.call(this.element.children);
-	            children.forEach(function (e) {
-	                var observer = new MutationObserver(function (mutations) {
-	                    mutations.forEach(function (mutation) {
-	                        if (mutation.type == "attributes") {
-	                            console.log("child attributes changed");
-	                            var modified_layer = self.layers.find(function (layer) {
-	                                return layer.elem === e;
-	                            });
-	                            modified_layer.elem = e;
-	                            modified_layer.params = self._get_layer_params(e);
-	                            self._scene.remove(modified_layer.mesh);
-	                            console.log(self._scene);
-	                            modified_layer.layer._update(modified_layer.params, function (updated_layer) {
-	                                modified_layer.mesh = updated_layer.mesh;
-	                                self._scene.add(updated_layer.mesh);
-	                            });
-	                        }
-	                    });
-	                });
-	                observer.observe(e, {
-	                    attributes: true
-	                });
-	            });
-	        }
-	    }, {
-	        key: '_observe_animations',
-	        value: function _observe_animations(anim_element) {
-	            var self = this;
-	            var observer = new MutationObserver(function (mutations) {
-	                mutations.forEach(function (mutation) {
-	                    if (mutation.type == "attributes") {
-	                        console.log("animation attributes changed");
-	                        var modified_layer = self.layers.find(function (layer) {
-	                            return layer.elem === anim_element.parentNode;
-	                        });
-	                        modified_layer.elem = anim_element.parentNode;
-	                        modified_layer.params = self._get_layer_params(anim_element.parentNode);
-	                        self._scene.remove(modified_layer.mesh);
-	                        modified_layer.layer._update(modified_layer.params, function (updated_layer) {
-	                            modified_layer.mesh = updated_layer.mesh;
-	                            self._scene.add(updated_layer.mesh);
-	                        });
-	                    }
-	                });
-	            });
-	            observer.observe(anim_element, {
-	                attributes: true
-	            });
 	        }
 	    }, {
 	        key: '_createScene',
@@ -45668,12 +45649,15 @@
 	                    spin: { type: 'f', value: 1 }
 	                }
 	            });
-	            this._loadSVG().then(function (mesh) {
 	
-	                _this2.mesh = mesh;
-	                _this2.ready.call();
-	                _this2._init_animations();
+	            this._update(this.params, function () {
+	                _this2.ready.call(_this2, _this2);
 	            });
+	        }
+	    }, {
+	        key: '_destory',
+	        value: function _destory() {
+	            delete this;
 	        }
 	    }, {
 	        key: '_update',
@@ -45695,13 +45679,6 @@
 	                ready(_this3);
 	            });
 	        }
-	    }, {
-	        key: '_init_animations',
-	        value: function _init_animations() {
-	            this._update(this.params, function () {
-	                console.log("animations loaded");
-	            });
-	        }
 	
 	        // load svg 
 	
@@ -45713,8 +45690,9 @@
 	            return new Promise(function (resolve, reject) {
 	                var self = _this4;
 	                // load default SVG asychronously 
-	                (0, _loadSvg2.default)(_this4.params.svg, function (err, svg) {
+	                (0, _loadSvg2.default)(_this4.params.src, function (err, svg) {
 	                    if (err) reject(err);
+	
 	                    var mesh = generate_mesh(svg);
 	                    resolve(mesh);
 	                });

@@ -45,12 +45,13 @@ export default class Layer {
                 spin: { type: 'f', value: 1 }
             }
         })
-        this._loadSVG().then((mesh) => {
 
-            this.mesh = mesh
-            this.ready.call()
-            this._init_animations()
+        this._update(this.params, () => {
+            this.ready.call(this, this)
         })
+    }
+    _destory() {
+        delete this
     }
 
     _update(params, ready) {
@@ -71,19 +72,14 @@ export default class Layer {
 
     }
 
-    _init_animations() {
-        this._update(this.params, () => {
-            console.log("animations loaded")
-        })
-    }
-
     // load svg 
     _loadSVG() {
         return new Promise((resolve, reject) => {
             let self = this
             // load default SVG asychronously 
-            loadSvg(this.params.svg, function (err, svg) {
+            loadSvg(this.params.src, function (err, svg) {
                 if (err) reject(err)
+                
                 let mesh = generate_mesh(svg)
                 resolve(mesh)
             })

@@ -21,17 +21,19 @@
         <c-animation type="fade-in" duration="2.0" delay="0.0" looping="true"></c-animation>
       </c-layer>
     </webgl-composer>
-    <pre><code class="html" id="example"></code></pre>
     <div class="content card">
-        shards allows you to easily harness the power of webGL to create looping SVG animations.
+        shards allows you to easily harness the power of webGL to create looping SVG animations. <button onClick="addElem()"></button>
     </div>
     </div>
     <!--      -->
     <script>
-    var example = '<shards-canvas class="shards" background="#ff5454" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70><svg-layer src="./lyninx.svg" color="#fff" z_depth="0.0" scale="1.0" animation="explode" duration="4.0" delay="1.0"> </shards-canvas>'
-    hljs.initHighlightingOnLoad()
-    html = document.createTextNode(hljs.fixMarkup(example))
-    document.getElementById("example").appendChild(html)
+    function addElem() {
+      console.log("CLICKED")
+      var elem = document.getElementsByClassName("shards")[0]
+      var layer = document.createElement("c-layer")
+      layer.setAttribute('src', './lyninx_inkscape.svg')
+      elem.appendChild(layer)
+    }
     </script>
     <script src="ext/custom-elements-shim.js"></script>
     <script src="ext/custom-elements.min.js"></script>

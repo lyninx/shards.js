@@ -9,23 +9,28 @@ class WebGLComposerElement extends HTMLElement {
 		this.shadow = this.attachShadow({mode: 'open'})
 	}
 	connectedCallback() {
-		console.log("CONNECTED")
 		this.style.display = "block"
 		this.app = new App(this, this.shadow)
 		this.app.start()
 	}
-	connectedLayer() {
-
-	}
 }
 
 class LayerElement extends HTMLElement{
+	static get observedAttributes() {return ['src', 'color', 'z_depth', 'scale']; }
 	constructor() {
 		super()
 	}
 	connectedCallback() {
-		this.parentNode.app._init_layers()
+		console.log("CONNECTED CALLBACK")
 		this.app = this.parentNode.app
+		this.app._create_layer(this)
+	}
+	attributeChangedCallback(attribute, oldValue, newValue) {
+		this.parentNode.app._update_layer(this, attribute, newValue)
+	}
+	disconnectedCallback(){
+		console.log("DISCONNECT")
+		this.app._remove_layer(this)
 	}
 }
 
@@ -35,7 +40,7 @@ class AnimationElement extends HTMLElement{
 		super()
 	}
 	connectedCallback() {
-		this.parentNode.app._observe_animations(this)
+		//this.parentNode.app._observe_animations(this)
 	}
 }
 customElements.define('webgl-composer', WebGLComposerElement)
