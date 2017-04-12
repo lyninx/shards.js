@@ -67,38 +67,85 @@
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
-	__webpack_require__(181);
+	__webpack_require__(182);
 	
-	// TODO: use polymer web components in the future
-	// 		 inherit from HTMLCanvasElement when browser support allows
+	var WebGLComposerElement = function (_HTMLElement) {
+		_inherits(WebGLComposerElement, _HTMLElement);
 	
-	var ShardsElement = function (_HTMLElement) {
-		_inherits(ShardsElement, _HTMLElement);
+		function WebGLComposerElement() {
+			_classCallCheck(this, WebGLComposerElement);
 	
-		function ShardsElement() {
-			_classCallCheck(this, ShardsElement);
+			var _this = _possibleConstructorReturn(this, (WebGLComposerElement.__proto__ || Object.getPrototypeOf(WebGLComposerElement)).call(this));
 	
-			return _possibleConstructorReturn(this, (ShardsElement.__proto__ || Object.getPrototypeOf(ShardsElement)).apply(this, arguments));
+			_this.shadow = _this.attachShadow({ mode: 'open' });
+			return _this;
 		}
 	
-		_createClass(ShardsElement, [{
+		_createClass(WebGLComposerElement, [{
 			key: 'connectedCallback',
 			value: function connectedCallback() {
+				console.log("CONNECTED");
 				this.style.display = "block";
+				this.app = new _App2.default(this, this.shadow);
+				this.app.start();
+			}
+		}, {
+			key: 'connectedLayer',
+			value: function connectedLayer() {}
+		}]);
+	
+		return WebGLComposerElement;
+	}(HTMLElement);
+	
+	var LayerElement = function (_HTMLElement2) {
+		_inherits(LayerElement, _HTMLElement2);
+	
+		function LayerElement() {
+			_classCallCheck(this, LayerElement);
+	
+			return _possibleConstructorReturn(this, (LayerElement.__proto__ || Object.getPrototypeOf(LayerElement)).call(this));
+		}
+	
+		_createClass(LayerElement, [{
+			key: 'connectedCallback',
+			value: function connectedCallback() {
+				this.parentNode.app._init_layers();
+				this.app = this.parentNode.app;
 			}
 		}]);
 	
-		return ShardsElement;
+		return LayerElement;
 	}(HTMLElement);
 	
-	customElements.define('shards-canvas', ShardsElement);
+	var AnimationElement = function (_HTMLElement3) {
+		_inherits(AnimationElement, _HTMLElement3);
 	
-	document.addEventListener('DOMContentLoaded', function () {
-		console.log("DOM loaded");
-		var elems = document.getElementsByTagName("shards-canvas");
-		var app = new _App2.default(elems[0]);
-		app.start();
-	});
+		_createClass(AnimationElement, null, [{
+			key: 'observedAttributes',
+			get: function get() {
+				return ['type', 'duration', 'delay', 'looping'];
+			}
+		}]);
+	
+		function AnimationElement() {
+			_classCallCheck(this, AnimationElement);
+	
+			return _possibleConstructorReturn(this, (AnimationElement.__proto__ || Object.getPrototypeOf(AnimationElement)).call(this));
+		}
+	
+		_createClass(AnimationElement, [{
+			key: 'connectedCallback',
+			value: function connectedCallback() {
+				this.parentNode.app._observe_animations(this);
+			}
+		}]);
+	
+		return AnimationElement;
+	}(HTMLElement);
+	
+	customElements.define('webgl-composer', WebGLComposerElement);
+	customElements.define('c-layer', LayerElement);
+	customElements.define('c-animation', AnimationElement);
 
 /***/ },
 /* 2 */
@@ -112,11 +159,19 @@
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
+	var _three = __webpack_require__(3);
+	
+	var _three2 = _interopRequireDefault(_three);
+	
 	var _Animate = __webpack_require__(4);
 	
 	var _Animate2 = _interopRequireDefault(_Animate);
 	
-	var _Util = __webpack_require__(59);
+	var _Layer = __webpack_require__(59);
+	
+	var _Layer2 = _interopRequireDefault(_Layer);
+	
+	var _Util = __webpack_require__(147);
 	
 	var _Util2 = _interopRequireDefault(_Util);
 	
@@ -124,39 +179,25 @@
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	var three = __webpack_require__(3);
-	var reindex = __webpack_require__(94);
-	var unindex = __webpack_require__(95);
-	var loadSvg = __webpack_require__(96);
-	var parsePath = __webpack_require__(104).parse;
-	var svgMesh = __webpack_require__(106);
-	var elementResize = __webpack_require__(177);
-	var createGeom = __webpack_require__(178)(THREE);
-	var vertShader = __webpack_require__(179);
-	var fragShader = __webpack_require__(180);
-	
 	var NEAR = 0.1;
 	var FAR = 2000;
-	var TIMELINE_LENGTH = 256;
 	var WAVE_DIM = 16;
 	
 	var prev_frame = 0.0;
 	var time = 0.0;
 	
 	var App = function () {
-	    function App(domElement) {
+	    function App(domElement, shadow) {
 	        _classCallCheck(this, App);
 	
-	        this.wave = {};
-	        this.primary = {};
 	        this.canvas = {};
 	        this.element = domElement;
-	
+	        this.shadow = shadow;
 	        this.config = {};
 	
-	        this._bind('_render', '_handleResize', '_loadSVG', '_update');
+	        this._bind('_render', '_handleResize', '_update', '_create', '_create_layers', '_init_layers', '_setupDOM');
 	        this._time = 0.0;
-	        this._configure();
+	        this._create();
 	        this._setup3D();
 	        this._setupDOM();
 	        this._createScene();
@@ -181,21 +222,73 @@
 	            });
 	        }
 	    }, {
-	        key: '_configure',
-	        value: function _configure() {
+	        key: '_create',
+	        value: function _create() {
 	            this.canvas.width = this.element.clientWidth;
 	            this.canvas.height = this.element.clientHeight;
 	
-	            this.config.svg = this.element.getAttribute("svg") || "";
-	            this.config.color = this.element.getAttribute("color") || "#000";
-	            this.config.background = this.element.getAttribute("background") || "#fff";
+	            this.config.background = this.element.getAttribute("background") || "#000";
 	            this.config.zoom = parseFloat(this.element.getAttribute("zoom")) || 1.0;
 	            this.config.x_offset = parseFloat(this.element.getAttribute("x_offset")) || 0.0;
 	            this.config.y_offset = parseFloat(this.element.getAttribute("y_offset")) || 0.0;
 	            this.config.fov = parseFloat(this.element.getAttribute("fov")) || 70;
-	            this.config.animation = this.element.getAttribute("animation");
-	            this.config.duration = parseFloat(this.element.getAttribute("duration")) || 4.0;
-	            this.config.delay = parseFloat(this.element.getAttribute("delay")) || 1.0;
+	        }
+	    }, {
+	        key: '_get_layers',
+	        value: function _get_layers() {
+	            return this.layers;
+	        }
+	    }, {
+	        key: '_init_layers',
+	        value: function _init_layers() {
+	            this._create_layers();
+	            this._observe_layers();
+	        }
+	    }, {
+	        key: '_create_layers',
+	        value: function _create_layers() {
+	            var _this2 = this;
+	
+	            this.layers = [];
+	            var children = [].slice.call(this.element.children);
+	            // wow. this need refactoring
+	            children.forEach(function (elem) {
+	                var params = _this2._get_layer_params(elem);
+	                _this2.layers.push({
+	                    elem: elem,
+	                    tag: elem.tagName.toLowerCase(),
+	                    params: params
+	                });
+	            });
+	            this.layers.forEach(function (l) {
+	                var layer = l.layer = new _Layer2.default(l.tag, l.params, function () {
+	                    // mesh loaded into scene
+	                    console.log("> loaded " + l.tag);
+	                    _this2._scene.add(layer.mesh);
+	                    l.mesh = layer.mesh;
+	                });
+	            });
+	        }
+	    }, {
+	        key: '_get_layer_params',
+	        value: function _get_layer_params(elem) {
+	            var params = {};
+	            params.svg = elem.getAttribute("src");
+	            params.color = elem.getAttribute("color") || "#fff";
+	            params.z_depth = elem.getAttribute("z_depth") || 0.0;
+	            params.scale = elem.getAttribute("scale") || 1.0;
+	            params.animations = [];
+	            var children = [].slice.call(elem.children);
+	            children.forEach(function (elem) {
+	                // any tag name works
+	                var anim = {};
+	                anim.type = elem.getAttribute("type");
+	                anim.duration = elem.getAttribute("duration");
+	                anim.delay = elem.getAttribute("delay");
+	                anim.looping = elem.getAttribute("looping") || false;
+	                params.animations.push(anim);
+	            });
+	            return params;
 	        }
 	    }, {
 	        key: '_setup3D',
@@ -203,7 +296,7 @@
 	            var renderer = this._renderer = new THREE.WebGLRenderer({ antialias: true });
 	            renderer.setSize(this.canvas.width, this.canvas.height);
 	            renderer.setPixelRatio(window.devicePixelRatio);
-	            renderer.setClearColor(0x60a0a0);
+	            renderer.setClearColor(this.config.background);
 	
 	            this._scene = new THREE.Scene();
 	            this._camera = new THREE.PerspectiveCamera(this.config.fov, this.canvas.width / this.canvas.height, NEAR, FAR);
@@ -214,8 +307,82 @@
 	    }, {
 	        key: '_setupDOM',
 	        value: function _setupDOM() {
-	            elementResize(this.element, this._handleResize);
-	            this.element.appendChild(this._renderer.domElement);
+	            var self = this;
+	            this.mutation_observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+	            var observer = new MutationObserver(function (mutations) {
+	                mutations.forEach(function (mutation) {
+	                    if (mutation.type == "attributes") {
+	                        console.log("attributes changed");
+	                        self._create();
+	                        self._camera = new THREE.PerspectiveCamera(self.config.fov, self.canvas.width / self.canvas.height, NEAR, FAR);
+	                        self._camera.position.x = 0.0 + self.config.x_offset;
+	                        self._camera.position.y = 6.0 + self.config.y_offset;
+	                        self._camera.position.z = 32 / self.config.zoom;
+	                        self._renderer.setClearColor(self.config.background);
+	                    }
+	                });
+	            });
+	            observer.observe(this.element, {
+	                attributes: true
+	            });
+	            window.addEventListener('resize', this._handleResize);
+	
+	            this.element.addEventListener('resize', this._handleResize);
+	            this.shadow.appendChild(this._renderer.domElement);
+	        }
+	    }, {
+	        key: '_observe_layers',
+	        value: function _observe_layers() {
+	            var self = this;
+	            var children = [].slice.call(this.element.children);
+	            children.forEach(function (e) {
+	                var observer = new MutationObserver(function (mutations) {
+	                    mutations.forEach(function (mutation) {
+	                        if (mutation.type == "attributes") {
+	                            console.log("child attributes changed");
+	                            var modified_layer = self.layers.find(function (layer) {
+	                                return layer.elem === e;
+	                            });
+	                            modified_layer.elem = e;
+	                            modified_layer.params = self._get_layer_params(e);
+	                            self._scene.remove(modified_layer.mesh);
+	                            console.log(self._scene);
+	                            modified_layer.layer._update(modified_layer.params, function (updated_layer) {
+	                                modified_layer.mesh = updated_layer.mesh;
+	                                self._scene.add(updated_layer.mesh);
+	                            });
+	                        }
+	                    });
+	                });
+	                observer.observe(e, {
+	                    attributes: true
+	                });
+	            });
+	        }
+	    }, {
+	        key: '_observe_animations',
+	        value: function _observe_animations(anim_element) {
+	            var self = this;
+	            var observer = new MutationObserver(function (mutations) {
+	                mutations.forEach(function (mutation) {
+	                    if (mutation.type == "attributes") {
+	                        console.log("animation attributes changed");
+	                        var modified_layer = self.layers.find(function (layer) {
+	                            return layer.elem === anim_element.parentNode;
+	                        });
+	                        modified_layer.elem = anim_element.parentNode;
+	                        modified_layer.params = self._get_layer_params(anim_element.parentNode);
+	                        self._scene.remove(modified_layer.mesh);
+	                        modified_layer.layer._update(modified_layer.params, function (updated_layer) {
+	                            modified_layer.mesh = updated_layer.mesh;
+	                            self._scene.add(updated_layer.mesh);
+	                        });
+	                    }
+	                });
+	            });
+	            observer.observe(anim_element, {
+	                attributes: true
+	            });
 	        }
 	    }, {
 	        key: '_createScene',
@@ -224,26 +391,6 @@
 	
 	            this.frame = 0;
 	            this.prev_frame = -1;
-	
-	            this.primary.material = new THREE.ShaderMaterial({
-	                wireframeLinewidth: 1,
-	                vertexShader: vertShader,
-	                fragmentShader: fragShader,
-	                wireframe: false,
-	                visible: true,
-	                transparent: true,
-	                side: THREE.DoubleSide,
-	                uniforms: {
-	                    color: { value: new THREE.Color(0xff2200) },
-	                    opacity: { type: 'f', value: 1 },
-	                    scale: { type: 'f', value: 1 },
-	                    animate: { type: 'f', value: 1 }
-	                }
-	            });
-	
-	            this._loadSVG();
-	            var anim = new _Animate2.default(this.primary.material, "explode");
-	            anim.play();
 	        }
 	    }, {
 	        key: '_update',
@@ -275,42 +422,6 @@
 	            camera.aspect = canvas.clientWidth / canvas.clientHeight;
 	            camera.updateProjectionMatrix();
 	            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-	        }
-	
-	        // load svg 
-	
-	    }, {
-	        key: '_loadSVG',
-	        value: function _loadSVG() {
-	            var self = this;
-	            this.svg_loaded = false;
-	            // load default SVG asychronously 
-	            loadSvg(this.config.svg, function (err, svg) {
-	                if (err) throw err;
-	                load(svg);
-	            });
-	            // load svg into scene
-	            function load(svg) {
-	                var svgPath = parsePath(svg);
-	                var complex = svgMesh(svgPath, { delaunay: false, scale: 20, randomization: 0 });
-	                complex = reindex(unindex(complex.positions, complex.cells));
-	                var svg_geometry = new createGeom(complex);
-	                var buffer_geometry = new THREE.BufferGeometry().fromGeometry(svg_geometry);
-	                var attributes = _Util2.default.getAnimationAttributes(complex.positions, complex.cells);
-	                buffer_geometry.addAttribute('direction', attributes.direction);
-	                buffer_geometry.addAttribute('centroid', attributes.centroid);
-	                svg_geometry.dispose();
-	                var mesh = new THREE.Mesh(buffer_geometry, self.primary.material);
-	                mesh.scale.set(16, 16, 16);
-	                mesh.name = "primary";
-	                self.svg_loaded = true;
-	                mesh.position.y += 6;
-	                self._scene.add(mesh);
-	                console.log();
-	            }
-	            function clearSVG() {
-	                self._scene.remove(self._scene.children[1]);
-	            }
 	        }
 	    }]);
 	
@@ -43689,17 +43800,19 @@
 	var tweenr = Tweenr({ defaultEase: 'expoOut' });
 	
 	var Animate = function () {
-		function Animate(material, animation) {
-			var duration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 4.0;
-			var delay = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0.0;
+		function Animate(material, mesh, animation) {
+			var duration = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 4.0;
+			var delay = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 1.0;
 	
 			_classCallCheck(this, Animate);
 	
-			this.duration = duration;
-			this.delay = delay;
+			this.duration = parseFloat(duration);
+			this.delay = parseFloat(delay);
 			this.animation = animation;
+			this.mesh = mesh;
 			this.material = material;
 			this._bind('play', 'explode');
+			this.enabled = true;
 		}
 	
 		_createClass(Animate, [{
@@ -43719,57 +43832,120 @@
 			key: 'play',
 			value: function play() {
 				switch (this.animation) {
+					case "fade-in":
+						this.material.uniforms.opacity.value = 0.0;
+						this.fade_in(this.duration, this.delay);
+						this.animation = "fade-out";
+						break;
+					case "fade-out":
+						this.material.uniforms.opacity.value = 1.0;
+						this.fade_out(this.duration, this.delay);
+						this.animation = "fade-in";
+						break;
+					case "spin":
+						this.spin(this.duration, this.delay);
+						break;
 					case "explode":
-						this.explode(this.duration, 1.0);
+						this.explode(this.duration, this.delay);
 						this.animation = "implode";
 						break;
 					case "implode":
 						this.implode(this.duration);
 						this.animation = "explode";
+						break;
 					default:
-						console.log("invalid animation");
+						console.warn("invalid animation parameter");
 				}
 			}
 		}, {
-			key: 'explode',
-			value: function explode(dur) {
+			key: 'stop',
+			value: function stop() {
+				this.enabled = false;
+				console.log("animation cancelled");
+				this.tween.cancel();
+				this.material.uniforms.animate.value = 1.0;
+				this.material.uniforms.opacity.value = 1.0;
+				this.material.uniforms.spin.value = 1.0;
+			}
+		}, {
+			key: 'fade_in',
+			value: function fade_in(dur) {
 				var _this2 = this;
 	
 				var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 	
-				tweenr.to(this.material.uniforms.animate, {
+				this.tween = tweenr.to(this.material.uniforms.opacity, {
+					duration: dur,
+					value: 1,
+					delay: delay,
+					ease: 'linear'
+				}).on('complete', function () {
+					if (_this2.enabled) _this2.play();
+				});
+			}
+		}, {
+			key: 'fade_out',
+			value: function fade_out(dur) {
+				var _this3 = this;
+	
+				var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	
+				this.tween = tweenr.to(this.material.uniforms.opacity, {
+					duration: dur,
+					value: 0,
+					delay: delay,
+					ease: 'linear'
+				}).on('complete', function () {
+					if (_this3.enabled) _this3.play();
+				});
+			}
+		}, {
+			key: 'spin',
+			value: function spin(dur) {
+				var _this4 = this;
+	
+				var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	
+				this.tween = tweenr.to(this.material.uniforms.spin, {
+					duration: dur,
+					value: 0,
+					delay: delay,
+					ease: 'linear'
+				}).on('complete', function () {
+					_this4.material.uniforms.spin.value = 1.0;
+					if (_this4.enabled) _this4.play();
+				});
+			}
+		}, {
+			key: 'explode',
+			value: function explode(dur) {
+				var _this5 = this;
+	
+				var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+	
+				this.tween = tweenr.to(this.material.uniforms.animate, {
 					duration: dur,
 					value: 0,
 					delay: delay,
 					ease: 'circOut'
-				});
-				tweenr.to(this.material.uniforms.scale, {
-					duration: dur,
-					value: 0,
-					delay: delay
 				}).on('complete', function () {
-					_this2.play();
+					if (_this5.enabled) _this5.play();
 				});
 			}
 		}, {
 			key: 'implode',
 			value: function implode(material) {
-				var _this3 = this;
+				var _this6 = this;
 	
 				var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 	
-				tweenr.to(this.material.uniforms.animate, {
+				this.tween = tweenr.to(this.material.uniforms.animate, {
 					duration: 2.0,
 					value: 1,
 					delay: delay,
 					ease: 'quadInOut'
-				});
-				tweenr.to(this.material.uniforms.scale, {
-					duration: 2.0,
-					value: 1,
-					delay: delay
 				}).on('complete', function () {
-					_this3.play();
+					if (_this6.enabled) _this6.play();
 				});
 			}
 		}]);
@@ -45384,894 +45560,197 @@
 
 	/* WEBPACK VAR INJECTION */(function(THREE) {'use strict';
 	
-	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
 	
-	var triangleCentroid = __webpack_require__(60);
-	var randomVec3 = __webpack_require__(61).random;
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
-	module.exports = {
-		getAnimationAttributes: function getAnimationAttributes(positions, cells) {
-			var directions = new Float32Array(cells.length * 9);
-			var centroids = new Float32Array(cells.length * 9);
-			for (var i = 0, i9 = 0; i < cells.length; i++, i9 += 9) {
-				var _cells$i = _slicedToArray(cells[i], 3),
-				    f0 = _cells$i[0],
-				    f1 = _cells$i[1],
-				    f2 = _cells$i[2];
+	var _three = __webpack_require__(3);
 	
-				var triangle = [positions[f0], positions[f1], positions[f2]];
-				var center = triangleCentroid(triangle);
-				centroids[i9] = center[0];
-				centroids[i9 + 1] = center[1];
-				centroids[i9 + 2] = center[2];
+	var _three2 = _interopRequireDefault(_three);
 	
-				centroids[i9 + 3] = center[0];
-				centroids[i9 + 4] = center[1];
-				centroids[i9 + 5] = center[2];
+	var _meshReindex = __webpack_require__(60);
 	
-				centroids[i9 + 6] = center[0];
-				centroids[i9 + 7] = center[1];
-				centroids[i9 + 8] = center[2];
+	var _meshReindex2 = _interopRequireDefault(_meshReindex);
 	
-				var random = randomVec3([], Math.random());
-				directions[i9] = random[0];
-				directions[i9 + 1] = random[1];
-				directions[i9 + 2] = random[2];
+	var _unindexMesh = __webpack_require__(61);
 	
-				directions[i9 + 3] = random[0];
-				directions[i9 + 4] = random[1];
-				directions[i9 + 5] = random[2];
+	var _unindexMesh2 = _interopRequireDefault(_unindexMesh);
 	
-				directions[i9 + 6] = random[0];
-				directions[i9 + 7] = random[1];
-				directions[i9 + 8] = random[2];
-			}
+	var _loadSvg = __webpack_require__(62);
 	
-			return {
-				direction: new THREE.BufferAttribute(directions, 3),
-				centroid: new THREE.BufferAttribute(centroids, 3)
-			};
-		}
-	};
+	var _loadSvg2 = _interopRequireDefault(_loadSvg);
+	
+	var _extractSvgPath = __webpack_require__(70);
+	
+	var _svgMesh3d = __webpack_require__(72);
+	
+	var _svgMesh3d2 = _interopRequireDefault(_svgMesh3d);
+	
+	var _elementResizeEvent = __webpack_require__(143);
+	
+	var _elementResizeEvent2 = _interopRequireDefault(_elementResizeEvent);
+	
+	var _threeSimplicialComplex = __webpack_require__(144);
+	
+	var _threeSimplicialComplex2 = _interopRequireDefault(_threeSimplicialComplex);
+	
+	var _vertex = __webpack_require__(145);
+	
+	var _vertex2 = _interopRequireDefault(_vertex);
+	
+	var _fragment = __webpack_require__(146);
+	
+	var _fragment2 = _interopRequireDefault(_fragment);
+	
+	var _Animate = __webpack_require__(4);
+	
+	var _Animate2 = _interopRequireDefault(_Animate);
+	
+	var _Util = __webpack_require__(147);
+	
+	var _Util2 = _interopRequireDefault(_Util);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	var Layer = function () {
+	    function Layer(type) {
+	        var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+	        var ready = arguments[2];
+	
+	        _classCallCheck(this, Layer);
+	
+	        this.type = type;
+	        this.params = params;
+	        this.mesh = undefined;
+	        this.material = undefined;
+	        this.animations = [];
+	        this.ready = ready;
+	
+	        this._bind('_create', '_loadSVG', '_update');
+	        this._create();
+	    }
+	
+	    _createClass(Layer, [{
+	        key: '_bind',
+	        value: function _bind() {
+	            var _this = this;
+	
+	            for (var _len = arguments.length, methods = Array(_len), _key = 0; _key < _len; _key++) {
+	                methods[_key] = arguments[_key];
+	            }
+	
+	            methods.forEach(function (method) {
+	                return _this[method] = _this[method].bind(_this);
+	            });
+	        }
+	    }, {
+	        key: '_create',
+	        value: function _create() {
+	            var _this2 = this;
+	
+	            this.material = new THREE.ShaderMaterial({
+	                wireframeLinewidth: 1,
+	                vertexShader: _vertex2.default,
+	                fragmentShader: _fragment2.default,
+	                wireframe: false,
+	                visible: true,
+	                transparent: true,
+	                side: THREE.DoubleSide,
+	                uniforms: {
+	                    color: { value: new THREE.Color(this.params.color) },
+	                    opacity: { type: 'f', value: 1 },
+	                    scale: { type: 'f', value: 1 },
+	                    animate: { type: 'f', value: 1 },
+	                    spin: { type: 'f', value: 1 }
+	                }
+	            });
+	            this._loadSVG().then(function (mesh) {
+	
+	                _this2.mesh = mesh;
+	                _this2.ready.call();
+	                _this2._init_animations();
+	            });
+	        }
+	    }, {
+	        key: '_update',
+	        value: function _update(params, ready) {
+	            var _this3 = this;
+	
+	            this.params = params;
+	            this._loadSVG().then(function (mesh) {
+	                _this3.mesh = mesh;
+	                _this3.animations.forEach(function (animation, index, array) {
+	                    animation.stop();
+	                });
+	                _this3.material.uniforms.color.value = new THREE.Color(_this3.params.color);
+	                _this3.params.animations.forEach(function (anim) {
+	                    var animation = new _Animate2.default(_this3.material, _this3.mesh, anim.type, anim.duration, anim.delay);
+	                    animation.play();
+	                    _this3.animations.push(animation);
+	                });
+	                ready(_this3);
+	            });
+	        }
+	    }, {
+	        key: '_init_animations',
+	        value: function _init_animations() {
+	            this._update(this.params, function () {
+	                console.log("animations loaded");
+	            });
+	        }
+	
+	        // load svg 
+	
+	    }, {
+	        key: '_loadSVG',
+	        value: function _loadSVG() {
+	            var _this4 = this;
+	
+	            return new Promise(function (resolve, reject) {
+	                var self = _this4;
+	                // load default SVG asychronously 
+	                (0, _loadSvg2.default)(_this4.params.svg, function (err, svg) {
+	                    if (err) reject(err);
+	                    var mesh = generate_mesh(svg);
+	                    resolve(mesh);
+	                });
+	                // load svg mesh
+	                function generate_mesh(svg) {
+	                    var svgPath = (0, _extractSvgPath.parse)(svg);
+	                    var complex = (0, _svgMesh3d2.default)(svgPath, { delaunay: false, scale: 20, randomization: 0 });
+	                    complex = (0, _meshReindex2.default)((0, _unindexMesh2.default)(complex.positions, complex.cells));
+	                    var createGeom = (0, _threeSimplicialComplex2.default)(THREE);
+	                    var svg_geometry = new createGeom(complex);
+	                    var buffer_geometry = new THREE.BufferGeometry().fromGeometry(svg_geometry);
+	                    var attributes = _Util2.default.getAnimationAttributes(complex.positions, complex.cells);
+	                    buffer_geometry.addAttribute('direction', attributes.direction);
+	                    buffer_geometry.addAttribute('centroid', attributes.centroid);
+	                    svg_geometry.dispose();
+	
+	                    var mesh = new THREE.Mesh(buffer_geometry, self.material);
+	                    var scale = 16 * self.params.scale;
+	                    mesh.scale.set(scale, scale, scale);
+	                    mesh.name = self.params.svg;
+	                    mesh.position.y += 6;
+	
+	                    return mesh;
+	                }
+	            });
+	        }
+	    }]);
+	
+	    return Layer;
+	}();
+	
+	exports.default = Layer;
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ },
 /* 60 */
-/***/ function(module, exports) {
-
-	module.exports = triangleCentroid
-	function triangleCentroid (triangle) {
-	  if (triangle.length !== 3) {
-	    throw new TypeError('must provide triangle array of length 3')
-	  }
-	
-	  var dimension = triangle[0].length
-	  var result = new Array(dimension)
-	  for (var i = 0; i < dimension; i++) {
-	    var t0 = triangle[0][i]
-	    var t1 = triangle[1][i]
-	    var t2 = triangle[2][i]
-	    result[i] = (t0 + t1 + t2) / 3
-	  }
-	  return result
-	}
-
-
-/***/ },
-/* 61 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = {
-	  create: __webpack_require__(62)
-	  , clone: __webpack_require__(63)
-	  , angle: __webpack_require__(64)
-	  , fromValues: __webpack_require__(65)
-	  , copy: __webpack_require__(68)
-	  , set: __webpack_require__(69)
-	  , add: __webpack_require__(70)
-	  , subtract: __webpack_require__(71)
-	  , multiply: __webpack_require__(72)
-	  , divide: __webpack_require__(73)
-	  , min: __webpack_require__(74)
-	  , max: __webpack_require__(75)
-	  , scale: __webpack_require__(76)
-	  , scaleAndAdd: __webpack_require__(77)
-	  , distance: __webpack_require__(78)
-	  , squaredDistance: __webpack_require__(79)
-	  , length: __webpack_require__(80)
-	  , squaredLength: __webpack_require__(81)
-	  , negate: __webpack_require__(82)
-	  , inverse: __webpack_require__(83)
-	  , normalize: __webpack_require__(66)
-	  , dot: __webpack_require__(67)
-	  , cross: __webpack_require__(84)
-	  , lerp: __webpack_require__(85)
-	  , random: __webpack_require__(86)
-	  , transformMat4: __webpack_require__(87)
-	  , transformMat3: __webpack_require__(88)
-	  , transformQuat: __webpack_require__(89)
-	  , rotateX: __webpack_require__(90)
-	  , rotateY: __webpack_require__(91)
-	  , rotateZ: __webpack_require__(92)
-	  , forEach: __webpack_require__(93)
-	}
-
-/***/ },
-/* 62 */
-/***/ function(module, exports) {
-
-	module.exports = create;
-	
-	/**
-	 * Creates a new, empty vec3
-	 *
-	 * @returns {vec3} a new 3D vector
-	 */
-	function create() {
-	    var out = new Float32Array(3)
-	    out[0] = 0
-	    out[1] = 0
-	    out[2] = 0
-	    return out
-	}
-
-/***/ },
-/* 63 */
-/***/ function(module, exports) {
-
-	module.exports = clone;
-	
-	/**
-	 * Creates a new vec3 initialized with values from an existing vector
-	 *
-	 * @param {vec3} a vector to clone
-	 * @returns {vec3} a new 3D vector
-	 */
-	function clone(a) {
-	    var out = new Float32Array(3)
-	    out[0] = a[0]
-	    out[1] = a[1]
-	    out[2] = a[2]
-	    return out
-	}
-
-/***/ },
-/* 64 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = angle
-	
-	var fromValues = __webpack_require__(65)
-	var normalize = __webpack_require__(66)
-	var dot = __webpack_require__(67)
-	
-	/**
-	 * Get the angle between two 3D vectors
-	 * @param {vec3} a The first operand
-	 * @param {vec3} b The second operand
-	 * @returns {Number} The angle in radians
-	 */
-	function angle(a, b) {
-	    var tempA = fromValues(a[0], a[1], a[2])
-	    var tempB = fromValues(b[0], b[1], b[2])
-	 
-	    normalize(tempA, tempA)
-	    normalize(tempB, tempB)
-	 
-	    var cosine = dot(tempA, tempB)
-	
-	    if(cosine > 1.0){
-	        return 0
-	    } else {
-	        return Math.acos(cosine)
-	    }     
-	}
-
-
-/***/ },
-/* 65 */
-/***/ function(module, exports) {
-
-	module.exports = fromValues;
-	
-	/**
-	 * Creates a new vec3 initialized with the given values
-	 *
-	 * @param {Number} x X component
-	 * @param {Number} y Y component
-	 * @param {Number} z Z component
-	 * @returns {vec3} a new 3D vector
-	 */
-	function fromValues(x, y, z) {
-	    var out = new Float32Array(3)
-	    out[0] = x
-	    out[1] = y
-	    out[2] = z
-	    return out
-	}
-
-/***/ },
-/* 66 */
-/***/ function(module, exports) {
-
-	module.exports = normalize;
-	
-	/**
-	 * Normalize a vec3
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a vector to normalize
-	 * @returns {vec3} out
-	 */
-	function normalize(out, a) {
-	    var x = a[0],
-	        y = a[1],
-	        z = a[2]
-	    var len = x*x + y*y + z*z
-	    if (len > 0) {
-	        //TODO: evaluate use of glm_invsqrt here?
-	        len = 1 / Math.sqrt(len)
-	        out[0] = a[0] * len
-	        out[1] = a[1] * len
-	        out[2] = a[2] * len
-	    }
-	    return out
-	}
-
-/***/ },
-/* 67 */
-/***/ function(module, exports) {
-
-	module.exports = dot;
-	
-	/**
-	 * Calculates the dot product of two vec3's
-	 *
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {Number} dot product of a and b
-	 */
-	function dot(a, b) {
-	    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-	}
-
-/***/ },
-/* 68 */
-/***/ function(module, exports) {
-
-	module.exports = copy;
-	
-	/**
-	 * Copy the values from one vec3 to another
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the source vector
-	 * @returns {vec3} out
-	 */
-	function copy(out, a) {
-	    out[0] = a[0]
-	    out[1] = a[1]
-	    out[2] = a[2]
-	    return out
-	}
-
-/***/ },
-/* 69 */
-/***/ function(module, exports) {
-
-	module.exports = set;
-	
-	/**
-	 * Set the components of a vec3 to the given values
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {Number} x X component
-	 * @param {Number} y Y component
-	 * @param {Number} z Z component
-	 * @returns {vec3} out
-	 */
-	function set(out, x, y, z) {
-	    out[0] = x
-	    out[1] = y
-	    out[2] = z
-	    return out
-	}
-
-/***/ },
-/* 70 */
-/***/ function(module, exports) {
-
-	module.exports = add;
-	
-	/**
-	 * Adds two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function add(out, a, b) {
-	    out[0] = a[0] + b[0]
-	    out[1] = a[1] + b[1]
-	    out[2] = a[2] + b[2]
-	    return out
-	}
-
-/***/ },
-/* 71 */
-/***/ function(module, exports) {
-
-	module.exports = subtract;
-	
-	/**
-	 * Subtracts vector b from vector a
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function subtract(out, a, b) {
-	    out[0] = a[0] - b[0]
-	    out[1] = a[1] - b[1]
-	    out[2] = a[2] - b[2]
-	    return out
-	}
-
-/***/ },
-/* 72 */
-/***/ function(module, exports) {
-
-	module.exports = multiply;
-	
-	/**
-	 * Multiplies two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function multiply(out, a, b) {
-	    out[0] = a[0] * b[0]
-	    out[1] = a[1] * b[1]
-	    out[2] = a[2] * b[2]
-	    return out
-	}
-
-/***/ },
-/* 73 */
-/***/ function(module, exports) {
-
-	module.exports = divide;
-	
-	/**
-	 * Divides two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function divide(out, a, b) {
-	    out[0] = a[0] / b[0]
-	    out[1] = a[1] / b[1]
-	    out[2] = a[2] / b[2]
-	    return out
-	}
-
-/***/ },
-/* 74 */
-/***/ function(module, exports) {
-
-	module.exports = min;
-	
-	/**
-	 * Returns the minimum of two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function min(out, a, b) {
-	    out[0] = Math.min(a[0], b[0])
-	    out[1] = Math.min(a[1], b[1])
-	    out[2] = Math.min(a[2], b[2])
-	    return out
-	}
-
-/***/ },
-/* 75 */
-/***/ function(module, exports) {
-
-	module.exports = max;
-	
-	/**
-	 * Returns the maximum of two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function max(out, a, b) {
-	    out[0] = Math.max(a[0], b[0])
-	    out[1] = Math.max(a[1], b[1])
-	    out[2] = Math.max(a[2], b[2])
-	    return out
-	}
-
-/***/ },
-/* 76 */
-/***/ function(module, exports) {
-
-	module.exports = scale;
-	
-	/**
-	 * Scales a vec3 by a scalar number
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the vector to scale
-	 * @param {Number} b amount to scale the vector by
-	 * @returns {vec3} out
-	 */
-	function scale(out, a, b) {
-	    out[0] = a[0] * b
-	    out[1] = a[1] * b
-	    out[2] = a[2] * b
-	    return out
-	}
-
-/***/ },
-/* 77 */
-/***/ function(module, exports) {
-
-	module.exports = scaleAndAdd;
-	
-	/**
-	 * Adds two vec3's after scaling the second operand by a scalar value
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @param {Number} scale the amount to scale b by before adding
-	 * @returns {vec3} out
-	 */
-	function scaleAndAdd(out, a, b, scale) {
-	    out[0] = a[0] + (b[0] * scale)
-	    out[1] = a[1] + (b[1] * scale)
-	    out[2] = a[2] + (b[2] * scale)
-	    return out
-	}
-
-/***/ },
-/* 78 */
-/***/ function(module, exports) {
-
-	module.exports = distance;
-	
-	/**
-	 * Calculates the euclidian distance between two vec3's
-	 *
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {Number} distance between a and b
-	 */
-	function distance(a, b) {
-	    var x = b[0] - a[0],
-	        y = b[1] - a[1],
-	        z = b[2] - a[2]
-	    return Math.sqrt(x*x + y*y + z*z)
-	}
-
-/***/ },
-/* 79 */
-/***/ function(module, exports) {
-
-	module.exports = squaredDistance;
-	
-	/**
-	 * Calculates the squared euclidian distance between two vec3's
-	 *
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {Number} squared distance between a and b
-	 */
-	function squaredDistance(a, b) {
-	    var x = b[0] - a[0],
-	        y = b[1] - a[1],
-	        z = b[2] - a[2]
-	    return x*x + y*y + z*z
-	}
-
-/***/ },
-/* 80 */
-/***/ function(module, exports) {
-
-	module.exports = length;
-	
-	/**
-	 * Calculates the length of a vec3
-	 *
-	 * @param {vec3} a vector to calculate length of
-	 * @returns {Number} length of a
-	 */
-	function length(a) {
-	    var x = a[0],
-	        y = a[1],
-	        z = a[2]
-	    return Math.sqrt(x*x + y*y + z*z)
-	}
-
-/***/ },
-/* 81 */
-/***/ function(module, exports) {
-
-	module.exports = squaredLength;
-	
-	/**
-	 * Calculates the squared length of a vec3
-	 *
-	 * @param {vec3} a vector to calculate squared length of
-	 * @returns {Number} squared length of a
-	 */
-	function squaredLength(a) {
-	    var x = a[0],
-	        y = a[1],
-	        z = a[2]
-	    return x*x + y*y + z*z
-	}
-
-/***/ },
-/* 82 */
-/***/ function(module, exports) {
-
-	module.exports = negate;
-	
-	/**
-	 * Negates the components of a vec3
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a vector to negate
-	 * @returns {vec3} out
-	 */
-	function negate(out, a) {
-	    out[0] = -a[0]
-	    out[1] = -a[1]
-	    out[2] = -a[2]
-	    return out
-	}
-
-/***/ },
-/* 83 */
-/***/ function(module, exports) {
-
-	module.exports = inverse;
-	
-	/**
-	 * Returns the inverse of the components of a vec3
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a vector to invert
-	 * @returns {vec3} out
-	 */
-	function inverse(out, a) {
-	  out[0] = 1.0 / a[0]
-	  out[1] = 1.0 / a[1]
-	  out[2] = 1.0 / a[2]
-	  return out
-	}
-
-/***/ },
-/* 84 */
-/***/ function(module, exports) {
-
-	module.exports = cross;
-	
-	/**
-	 * Computes the cross product of two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @returns {vec3} out
-	 */
-	function cross(out, a, b) {
-	    var ax = a[0], ay = a[1], az = a[2],
-	        bx = b[0], by = b[1], bz = b[2]
-	
-	    out[0] = ay * bz - az * by
-	    out[1] = az * bx - ax * bz
-	    out[2] = ax * by - ay * bx
-	    return out
-	}
-
-/***/ },
-/* 85 */
-/***/ function(module, exports) {
-
-	module.exports = lerp;
-	
-	/**
-	 * Performs a linear interpolation between two vec3's
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the first operand
-	 * @param {vec3} b the second operand
-	 * @param {Number} t interpolation amount between the two inputs
-	 * @returns {vec3} out
-	 */
-	function lerp(out, a, b, t) {
-	    var ax = a[0],
-	        ay = a[1],
-	        az = a[2]
-	    out[0] = ax + t * (b[0] - ax)
-	    out[1] = ay + t * (b[1] - ay)
-	    out[2] = az + t * (b[2] - az)
-	    return out
-	}
-
-/***/ },
-/* 86 */
-/***/ function(module, exports) {
-
-	module.exports = random;
-	
-	/**
-	 * Generates a random vector with the given scale
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
-	 * @returns {vec3} out
-	 */
-	function random(out, scale) {
-	    scale = scale || 1.0
-	
-	    var r = Math.random() * 2.0 * Math.PI
-	    var z = (Math.random() * 2.0) - 1.0
-	    var zScale = Math.sqrt(1.0-z*z) * scale
-	
-	    out[0] = Math.cos(r) * zScale
-	    out[1] = Math.sin(r) * zScale
-	    out[2] = z * scale
-	    return out
-	}
-
-/***/ },
-/* 87 */
-/***/ function(module, exports) {
-
-	module.exports = transformMat4;
-	
-	/**
-	 * Transforms the vec3 with a mat4.
-	 * 4th vector component is implicitly '1'
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the vector to transform
-	 * @param {mat4} m matrix to transform with
-	 * @returns {vec3} out
-	 */
-	function transformMat4(out, a, m) {
-	    var x = a[0], y = a[1], z = a[2],
-	        w = m[3] * x + m[7] * y + m[11] * z + m[15]
-	    w = w || 1.0
-	    out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w
-	    out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w
-	    out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w
-	    return out
-	}
-
-/***/ },
-/* 88 */
-/***/ function(module, exports) {
-
-	module.exports = transformMat3;
-	
-	/**
-	 * Transforms the vec3 with a mat3.
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the vector to transform
-	 * @param {mat4} m the 3x3 matrix to transform with
-	 * @returns {vec3} out
-	 */
-	function transformMat3(out, a, m) {
-	    var x = a[0], y = a[1], z = a[2]
-	    out[0] = x * m[0] + y * m[3] + z * m[6]
-	    out[1] = x * m[1] + y * m[4] + z * m[7]
-	    out[2] = x * m[2] + y * m[5] + z * m[8]
-	    return out
-	}
-
-/***/ },
-/* 89 */
-/***/ function(module, exports) {
-
-	module.exports = transformQuat;
-	
-	/**
-	 * Transforms the vec3 with a quat
-	 *
-	 * @param {vec3} out the receiving vector
-	 * @param {vec3} a the vector to transform
-	 * @param {quat} q quaternion to transform with
-	 * @returns {vec3} out
-	 */
-	function transformQuat(out, a, q) {
-	    // benchmarks: http://jsperf.com/quaternion-transform-vec3-implementations
-	
-	    var x = a[0], y = a[1], z = a[2],
-	        qx = q[0], qy = q[1], qz = q[2], qw = q[3],
-	
-	        // calculate quat * vec
-	        ix = qw * x + qy * z - qz * y,
-	        iy = qw * y + qz * x - qx * z,
-	        iz = qw * z + qx * y - qy * x,
-	        iw = -qx * x - qy * y - qz * z
-	
-	    // calculate result * inverse quat
-	    out[0] = ix * qw + iw * -qx + iy * -qz - iz * -qy
-	    out[1] = iy * qw + iw * -qy + iz * -qx - ix * -qz
-	    out[2] = iz * qw + iw * -qz + ix * -qy - iy * -qx
-	    return out
-	}
-
-/***/ },
-/* 90 */
-/***/ function(module, exports) {
-
-	module.exports = rotateX;
-	
-	/**
-	 * Rotate a 3D vector around the x-axis
-	 * @param {vec3} out The receiving vec3
-	 * @param {vec3} a The vec3 point to rotate
-	 * @param {vec3} b The origin of the rotation
-	 * @param {Number} c The angle of rotation
-	 * @returns {vec3} out
-	 */
-	function rotateX(out, a, b, c){
-	    var p = [], r=[]
-	    //Translate point to the origin
-	    p[0] = a[0] - b[0]
-	    p[1] = a[1] - b[1]
-	    p[2] = a[2] - b[2]
-	
-	    //perform rotation
-	    r[0] = p[0]
-	    r[1] = p[1]*Math.cos(c) - p[2]*Math.sin(c)
-	    r[2] = p[1]*Math.sin(c) + p[2]*Math.cos(c)
-	
-	    //translate to correct position
-	    out[0] = r[0] + b[0]
-	    out[1] = r[1] + b[1]
-	    out[2] = r[2] + b[2]
-	
-	    return out
-	}
-
-/***/ },
-/* 91 */
-/***/ function(module, exports) {
-
-	module.exports = rotateY;
-	
-	/**
-	 * Rotate a 3D vector around the y-axis
-	 * @param {vec3} out The receiving vec3
-	 * @param {vec3} a The vec3 point to rotate
-	 * @param {vec3} b The origin of the rotation
-	 * @param {Number} c The angle of rotation
-	 * @returns {vec3} out
-	 */
-	function rotateY(out, a, b, c){
-	    var p = [], r=[]
-	    //Translate point to the origin
-	    p[0] = a[0] - b[0]
-	    p[1] = a[1] - b[1]
-	    p[2] = a[2] - b[2]
-	  
-	    //perform rotation
-	    r[0] = p[2]*Math.sin(c) + p[0]*Math.cos(c)
-	    r[1] = p[1]
-	    r[2] = p[2]*Math.cos(c) - p[0]*Math.sin(c)
-	  
-	    //translate to correct position
-	    out[0] = r[0] + b[0]
-	    out[1] = r[1] + b[1]
-	    out[2] = r[2] + b[2]
-	  
-	    return out
-	}
-
-/***/ },
-/* 92 */
-/***/ function(module, exports) {
-
-	module.exports = rotateZ;
-	
-	/**
-	 * Rotate a 3D vector around the z-axis
-	 * @param {vec3} out The receiving vec3
-	 * @param {vec3} a The vec3 point to rotate
-	 * @param {vec3} b The origin of the rotation
-	 * @param {Number} c The angle of rotation
-	 * @returns {vec3} out
-	 */
-	function rotateZ(out, a, b, c){
-	    var p = [], r=[]
-	    //Translate point to the origin
-	    p[0] = a[0] - b[0]
-	    p[1] = a[1] - b[1]
-	    p[2] = a[2] - b[2]
-	  
-	    //perform rotation
-	    r[0] = p[0]*Math.cos(c) - p[1]*Math.sin(c)
-	    r[1] = p[0]*Math.sin(c) + p[1]*Math.cos(c)
-	    r[2] = p[2]
-	  
-	    //translate to correct position
-	    out[0] = r[0] + b[0]
-	    out[1] = r[1] + b[1]
-	    out[2] = r[2] + b[2]
-	  
-	    return out
-	}
-
-/***/ },
-/* 93 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = forEach;
-	
-	var vec = __webpack_require__(62)()
-	
-	/**
-	 * Perform some operation over an array of vec3s.
-	 *
-	 * @param {Array} a the array of vectors to iterate over
-	 * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
-	 * @param {Number} offset Number of elements to skip at the beginning of the array
-	 * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
-	 * @param {Function} fn Function to call for each vector in the array
-	 * @param {Object} [arg] additional argument to pass to fn
-	 * @returns {Array} a
-	 * @function
-	 */
-	function forEach(a, stride, offset, count, fn, arg) {
-	        var i, l
-	        if(!stride) {
-	            stride = 3
-	        }
-	
-	        if(!offset) {
-	            offset = 0
-	        }
-	        
-	        if(count) {
-	            l = Math.min((count * stride) + offset, a.length)
-	        } else {
-	            l = a.length
-	        }
-	
-	        for(i = offset; i < l; i += stride) {
-	            vec[0] = a[i] 
-	            vec[1] = a[i+1] 
-	            vec[2] = a[i+2]
-	            fn(vec, vec, arg)
-	            a[i] = vec[0] 
-	            a[i+1] = vec[1] 
-	            a[i+2] = vec[2]
-	        }
-	        
-	        return a
-	}
-
-/***/ },
-/* 94 */
 /***/ function(module, exports) {
 
 	module.exports = reindex
@@ -46307,7 +45786,7 @@
 
 
 /***/ },
-/* 95 */
+/* 61 */
 /***/ function(module, exports) {
 
 	module.exports = unindex
@@ -46365,10 +45844,10 @@
 
 
 /***/ },
-/* 96 */
+/* 62 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var xhr = __webpack_require__(97);
+	var xhr = __webpack_require__(63);
 	
 	module.exports = function (opts, cb) {
 	    if (typeof opts === 'string') opts = { uri: opts };
@@ -46388,12 +45867,12 @@
 
 
 /***/ },
-/* 97 */
+/* 63 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var window = __webpack_require__(98)
-	var once = __webpack_require__(99)
-	var parseHeaders = __webpack_require__(100)
+	var window = __webpack_require__(64)
+	var once = __webpack_require__(65)
+	var parseHeaders = __webpack_require__(66)
 	
 	var messages = {
 	    "0": "Internal XMLHttpRequest Error",
@@ -46571,7 +46050,7 @@
 
 
 /***/ },
-/* 98 */
+/* 64 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {if (typeof window !== "undefined") {
@@ -46587,7 +46066,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 99 */
+/* 65 */
 /***/ function(module, exports) {
 
 	module.exports = once
@@ -46612,11 +46091,11 @@
 
 
 /***/ },
-/* 100 */
+/* 66 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var trim = __webpack_require__(101)
-	  , forEach = __webpack_require__(102)
+	var trim = __webpack_require__(67)
+	  , forEach = __webpack_require__(68)
 	  , isArray = function(arg) {
 	      return Object.prototype.toString.call(arg) === '[object Array]';
 	    }
@@ -46648,7 +46127,7 @@
 	}
 
 /***/ },
-/* 101 */
+/* 67 */
 /***/ function(module, exports) {
 
 	
@@ -46668,10 +46147,10 @@
 
 
 /***/ },
-/* 102 */
+/* 68 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isFunction = __webpack_require__(103)
+	var isFunction = __webpack_require__(69)
 	
 	module.exports = forEach
 	
@@ -46720,7 +46199,7 @@
 
 
 /***/ },
-/* 103 */
+/* 69 */
 /***/ function(module, exports) {
 
 	module.exports = isFunction
@@ -46741,10 +46220,10 @@
 
 
 /***/ },
-/* 104 */
+/* 70 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var parseXml = __webpack_require__(105)
+	var parseXml = __webpack_require__(71)
 	
 	function extractSvgPath (svgDoc) {
 	  // concat all the <path> elements to form an SVG path string
@@ -46773,7 +46252,7 @@
 
 
 /***/ },
-/* 105 */
+/* 71 */
 /***/ function(module, exports) {
 
 	module.exports = (function xmlparser() {
@@ -46805,18 +46284,18 @@
 	})()
 
 /***/ },
-/* 106 */
+/* 72 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var parseSVG = __webpack_require__(107)
-	var getContours = __webpack_require__(108)
-	var cdt2d = __webpack_require__(114)
-	var cleanPSLG = __webpack_require__(127)
-	var getBounds = __webpack_require__(169)
-	var normalize = __webpack_require__(170)
-	var random = __webpack_require__(172)
-	var assign = __webpack_require__(173)
-	var simplify = __webpack_require__(174)
+	var parseSVG = __webpack_require__(73)
+	var getContours = __webpack_require__(74)
+	var cdt2d = __webpack_require__(80)
+	var cleanPSLG = __webpack_require__(93)
+	var getBounds = __webpack_require__(135)
+	var normalize = __webpack_require__(136)
+	var random = __webpack_require__(138)
+	var assign = __webpack_require__(139)
+	var simplify = __webpack_require__(140)
 	
 	module.exports = svgMesh3d
 	function svgMesh3d (svgPath, opt) {
@@ -46935,7 +46414,7 @@
 
 
 /***/ },
-/* 107 */
+/* 73 */
 /***/ function(module, exports) {
 
 	
@@ -46998,13 +46477,13 @@
 
 
 /***/ },
-/* 108 */
+/* 74 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var bezier = __webpack_require__(109)
-	var abs = __webpack_require__(111)
-	var norm = __webpack_require__(112)
-	var copy = __webpack_require__(113)
+	var bezier = __webpack_require__(75)
+	var abs = __webpack_require__(77)
+	var norm = __webpack_require__(78)
+	var copy = __webpack_require__(79)
 	
 	function set(out, x, y) {
 	    out[0] = x
@@ -47048,13 +46527,13 @@
 	}
 
 /***/ },
-/* 109 */
+/* 75 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(110)()
+	module.exports = __webpack_require__(76)()
 
 /***/ },
-/* 110 */
+/* 76 */
 /***/ function(module, exports) {
 
 	function clone(point) { //TODO: use gl-vec2 for this
@@ -47257,7 +46736,7 @@
 
 
 /***/ },
-/* 111 */
+/* 77 */
 /***/ function(module, exports) {
 
 	
@@ -47330,7 +46809,7 @@
 
 
 /***/ },
-/* 112 */
+/* 78 */
 /***/ function(module, exports) {
 
 	
@@ -47536,7 +47015,7 @@
 
 
 /***/ },
-/* 113 */
+/* 79 */
 /***/ function(module, exports) {
 
 	module.exports = function vec2Copy(out, a) {
@@ -47546,15 +47025,15 @@
 	}
 
 /***/ },
-/* 114 */
+/* 80 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var monotoneTriangulate = __webpack_require__(115)
-	var makeIndex = __webpack_require__(123)
-	var delaunayFlip = __webpack_require__(124)
-	var filterTriangulation = __webpack_require__(126)
+	var monotoneTriangulate = __webpack_require__(81)
+	var makeIndex = __webpack_require__(89)
+	var delaunayFlip = __webpack_require__(90)
+	var filterTriangulation = __webpack_require__(92)
 	
 	module.exports = cdt2d
 	
@@ -47634,13 +47113,13 @@
 
 
 /***/ },
-/* 115 */
+/* 81 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bsearch = __webpack_require__(116)
-	var orient = __webpack_require__(117)[3]
+	var bsearch = __webpack_require__(82)
+	var orient = __webpack_require__(83)[3]
 	
 	var EVENT_POINT = 0
 	var EVENT_END   = 1
@@ -47827,7 +47306,7 @@
 
 
 /***/ },
-/* 116 */
+/* 82 */
 /***/ function(module, exports) {
 
 	"use strict"
@@ -47885,15 +47364,15 @@
 
 
 /***/ },
-/* 117 */
+/* 83 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict"
 	
-	var twoProduct = __webpack_require__(118)
-	var robustSum = __webpack_require__(119)
-	var robustScale = __webpack_require__(120)
-	var robustSubtract = __webpack_require__(122)
+	var twoProduct = __webpack_require__(84)
+	var robustSum = __webpack_require__(85)
+	var robustScale = __webpack_require__(86)
+	var robustSubtract = __webpack_require__(88)
 	
 	var NUM_EXPAND = 5
 	
@@ -48080,7 +47559,7 @@
 	generateOrientationProc()
 
 /***/ },
-/* 118 */
+/* 84 */
 /***/ function(module, exports) {
 
 	"use strict"
@@ -48118,7 +47597,7 @@
 	}
 
 /***/ },
-/* 119 */
+/* 85 */
 /***/ function(module, exports) {
 
 	"use strict"
@@ -48279,13 +47758,13 @@
 	}
 
 /***/ },
-/* 120 */
+/* 86 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict"
 	
-	var twoProduct = __webpack_require__(118)
-	var twoSum = __webpack_require__(121)
+	var twoProduct = __webpack_require__(84)
+	var twoSum = __webpack_require__(87)
 	
 	module.exports = scaleLinearExpansion
 	
@@ -48334,7 +47813,7 @@
 	}
 
 /***/ },
-/* 121 */
+/* 87 */
 /***/ function(module, exports) {
 
 	"use strict"
@@ -48356,7 +47835,7 @@
 	}
 
 /***/ },
-/* 122 */
+/* 88 */
 /***/ function(module, exports) {
 
 	"use strict"
@@ -48517,12 +47996,12 @@
 	}
 
 /***/ },
-/* 123 */
+/* 89 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bsearch = __webpack_require__(116)
+	var bsearch = __webpack_require__(82)
 	
 	module.exports = createTriangulation
 	
@@ -48627,13 +48106,13 @@
 
 
 /***/ },
-/* 124 */
+/* 90 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var inCircle = __webpack_require__(125)[4]
-	var bsearch = __webpack_require__(116)
+	var inCircle = __webpack_require__(91)[4]
+	var bsearch = __webpack_require__(82)
 	
 	module.exports = delaunayRefine
 	
@@ -48748,15 +48227,15 @@
 
 
 /***/ },
-/* 125 */
+/* 91 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict"
 	
-	var twoProduct = __webpack_require__(118)
-	var robustSum = __webpack_require__(119)
-	var robustDiff = __webpack_require__(122)
-	var robustScale = __webpack_require__(120)
+	var twoProduct = __webpack_require__(84)
+	var robustSum = __webpack_require__(85)
+	var robustDiff = __webpack_require__(88)
+	var robustScale = __webpack_require__(86)
 	
 	var NUM_EXPAND = 6
 	
@@ -48920,12 +48399,12 @@
 	generateInSphereTest()
 
 /***/ },
-/* 126 */
+/* 92 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bsearch = __webpack_require__(116)
+	var bsearch = __webpack_require__(82)
 	
 	module.exports = classifyFaces
 	
@@ -49106,23 +48585,23 @@
 
 
 /***/ },
-/* 127 */
+/* 93 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
 	module.exports = cleanPSLG
 	
-	var UnionFind = __webpack_require__(128)
-	var boxIntersect = __webpack_require__(129)
-	var segseg = __webpack_require__(143)
-	var rat = __webpack_require__(144)
-	var ratCmp = __webpack_require__(155)
-	var ratToFloat = __webpack_require__(156)
-	var ratVec = __webpack_require__(159)
-	var nextafter = __webpack_require__(160)
+	var UnionFind = __webpack_require__(94)
+	var boxIntersect = __webpack_require__(95)
+	var segseg = __webpack_require__(109)
+	var rat = __webpack_require__(110)
+	var ratCmp = __webpack_require__(121)
+	var ratToFloat = __webpack_require__(122)
+	var ratVec = __webpack_require__(125)
+	var nextafter = __webpack_require__(126)
 	
-	var solveIntersection = __webpack_require__(161)
+	var solveIntersection = __webpack_require__(127)
 	
 	// Bounds on a rational number when rounded to a float
 	function boundRat (r) {
@@ -49493,7 +48972,7 @@
 
 
 /***/ },
-/* 128 */
+/* 94 */
 /***/ function(module, exports) {
 
 	"use strict"; "use restrict";
@@ -49560,16 +49039,16 @@
 	}
 
 /***/ },
-/* 129 */
+/* 95 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
 	module.exports = boxIntersectWrapper
 	
-	var pool = __webpack_require__(130)
-	var sweep = __webpack_require__(137)
-	var boxIntersectIter = __webpack_require__(139)
+	var pool = __webpack_require__(96)
+	var sweep = __webpack_require__(103)
+	var boxIntersectIter = __webpack_require__(105)
 	
 	function boxEmpty(d, box) {
 	  for(var j=0; j<d; ++j) {
@@ -49703,13 +49182,13 @@
 	}
 
 /***/ },
-/* 130 */
+/* 96 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, Buffer) {'use strict'
 	
-	var bits = __webpack_require__(135)
-	var dup = __webpack_require__(136)
+	var bits = __webpack_require__(101)
+	var dup = __webpack_require__(102)
 	
 	//Legacy pool support
 	if(!global.__TYPEDARRAY_POOL) {
@@ -49920,10 +49399,10 @@
 	    BUFFER[i].length = 0
 	  }
 	}
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(131).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(97).Buffer))
 
 /***/ },
-/* 131 */
+/* 97 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/*!
@@ -49936,9 +49415,9 @@
 	
 	'use strict'
 	
-	var base64 = __webpack_require__(132)
-	var ieee754 = __webpack_require__(133)
-	var isArray = __webpack_require__(134)
+	var base64 = __webpack_require__(98)
+	var ieee754 = __webpack_require__(99)
+	var isArray = __webpack_require__(100)
 	
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -51719,7 +51198,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 132 */
+/* 98 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -51839,7 +51318,7 @@
 
 
 /***/ },
-/* 133 */
+/* 99 */
 /***/ function(module, exports) {
 
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -51929,7 +51408,7 @@
 
 
 /***/ },
-/* 134 */
+/* 100 */
 /***/ function(module, exports) {
 
 	var toString = {}.toString;
@@ -51940,7 +51419,7 @@
 
 
 /***/ },
-/* 135 */
+/* 101 */
 /***/ function(module, exports) {
 
 	/**
@@ -52150,7 +51629,7 @@
 
 
 /***/ },
-/* 136 */
+/* 102 */
 /***/ function(module, exports) {
 
 	"use strict"
@@ -52204,7 +51683,7 @@
 	module.exports = dupe
 
 /***/ },
-/* 137 */
+/* 103 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
@@ -52217,9 +51696,9 @@
 	  scanComplete:   scanComplete
 	}
 	
-	var pool  = __webpack_require__(130)
-	var bits  = __webpack_require__(135)
-	var isort = __webpack_require__(138)
+	var pool  = __webpack_require__(96)
+	var bits  = __webpack_require__(101)
+	var isort = __webpack_require__(104)
 	
 	//Flag for blue
 	var BLUE_FLAG = (1<<28)
@@ -52643,7 +52122,7 @@
 	}
 
 /***/ },
-/* 138 */
+/* 104 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -52884,21 +52363,21 @@
 	}
 
 /***/ },
-/* 139 */
+/* 105 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
 	module.exports = boxIntersectIter
 	
-	var pool = __webpack_require__(130)
-	var bits = __webpack_require__(135)
-	var bruteForce = __webpack_require__(140)
+	var pool = __webpack_require__(96)
+	var bits = __webpack_require__(101)
+	var bruteForce = __webpack_require__(106)
 	var bruteForcePartial = bruteForce.partial
 	var bruteForceFull = bruteForce.full
-	var sweep = __webpack_require__(137)
-	var findMedian = __webpack_require__(141)
-	var genPartition = __webpack_require__(142)
+	var sweep = __webpack_require__(103)
+	var findMedian = __webpack_require__(107)
+	var genPartition = __webpack_require__(108)
 	
 	//Twiddle parameters
 	var BRUTE_FORCE_CUTOFF    = 128       //Cut off for brute force search
@@ -53383,7 +52862,7 @@
 	}
 
 /***/ },
-/* 140 */
+/* 106 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -53532,14 +53011,14 @@
 	exports.full    = bruteForcePlanner(true)
 
 /***/ },
-/* 141 */
+/* 107 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
 	module.exports = findMedian
 	
-	var genPartition = __webpack_require__(142)
+	var genPartition = __webpack_require__(108)
 	
 	var partitionStartLessThan = genPartition('lo<p0', ['p0'])
 	
@@ -53679,7 +53158,7 @@
 	}
 
 /***/ },
-/* 142 */
+/* 108 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -53704,14 +53183,14 @@
 	}
 
 /***/ },
-/* 143 */
+/* 109 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict"
 	
 	module.exports = segmentsIntersect
 	
-	var orient = __webpack_require__(117)[3]
+	var orient = __webpack_require__(83)[3]
 	
 	function checkCollinear(a0, a1, b0, b1) {
 	
@@ -53756,17 +53235,17 @@
 	}
 
 /***/ },
-/* 144 */
+/* 110 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var isRat = __webpack_require__(145)
-	var isBN = __webpack_require__(146)
-	var num2bn = __webpack_require__(149)
-	var str2bn = __webpack_require__(151)
-	var rationalize = __webpack_require__(152)
-	var div = __webpack_require__(154)
+	var isRat = __webpack_require__(111)
+	var isBN = __webpack_require__(112)
+	var num2bn = __webpack_require__(115)
+	var str2bn = __webpack_require__(117)
+	var rationalize = __webpack_require__(118)
+	var div = __webpack_require__(120)
 	
 	module.exports = makeRational
 	
@@ -53822,12 +53301,12 @@
 
 
 /***/ },
-/* 145 */
+/* 111 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var isBN = __webpack_require__(146)
+	var isBN = __webpack_require__(112)
 	
 	module.exports = isRat
 	
@@ -53837,12 +53316,12 @@
 
 
 /***/ },
-/* 146 */
+/* 112 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var BN = __webpack_require__(147)
+	var BN = __webpack_require__(113)
 	
 	module.exports = isBN
 	
@@ -53854,7 +53333,7 @@
 
 
 /***/ },
-/* 147 */
+/* 113 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(module) {(function (module, exports) {
@@ -53909,7 +53388,7 @@
 	
 	  var Buffer;
 	  try {
-	    Buffer = __webpack_require__(131).Buffer;
+	    Buffer = __webpack_require__(97).Buffer;
 	  } catch (e) {
 	  }
 	
@@ -57285,10 +56764,10 @@
 	  };
 	})(typeof module === 'undefined' || module, this);
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(148)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(114)(module)))
 
 /***/ },
-/* 148 */
+/* 114 */
 /***/ function(module, exports) {
 
 	module.exports = function(module) {
@@ -57304,13 +56783,13 @@
 
 
 /***/ },
-/* 149 */
+/* 115 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var BN = __webpack_require__(147)
-	var db = __webpack_require__(150)
+	var BN = __webpack_require__(113)
+	var db = __webpack_require__(116)
 	
 	module.exports = num2bn
 	
@@ -57325,7 +56804,7 @@
 
 
 /***/ },
-/* 150 */
+/* 116 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {var hasTypedArrays = false
@@ -57429,15 +56908,15 @@
 	  var hi = module.exports.hi(n)
 	  return !(hi & 0x7ff00000)
 	}
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(131).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(97).Buffer))
 
 /***/ },
-/* 151 */
+/* 117 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var BN = __webpack_require__(147)
+	var BN = __webpack_require__(113)
 	
 	module.exports = str2BN
 	
@@ -57447,13 +56926,13 @@
 
 
 /***/ },
-/* 152 */
+/* 118 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var num2bn = __webpack_require__(149)
-	var sign = __webpack_require__(153)
+	var num2bn = __webpack_require__(115)
+	var sign = __webpack_require__(119)
 	
 	module.exports = rationalize
 	
@@ -57479,12 +56958,12 @@
 
 
 /***/ },
-/* 153 */
+/* 119 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var BN = __webpack_require__(147)
+	var BN = __webpack_require__(113)
 	
 	module.exports = sign
 	
@@ -57494,12 +56973,12 @@
 
 
 /***/ },
-/* 154 */
+/* 120 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var rationalize = __webpack_require__(152)
+	var rationalize = __webpack_require__(118)
 	
 	module.exports = div
 	
@@ -57509,7 +56988,7 @@
 
 
 /***/ },
-/* 155 */
+/* 121 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -57522,13 +57001,13 @@
 
 
 /***/ },
-/* 156 */
+/* 122 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bn2num = __webpack_require__(157)
-	var ctz = __webpack_require__(158)
+	var bn2num = __webpack_require__(123)
+	var ctz = __webpack_require__(124)
 	
 	module.exports = roundRat
 	
@@ -57564,12 +57043,12 @@
 
 
 /***/ },
-/* 157 */
+/* 123 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	const sign = __webpack_require__(153)
+	const sign = __webpack_require__(119)
 	
 	module.exports = bn2num
 	
@@ -57593,13 +57072,13 @@
 
 
 /***/ },
-/* 158 */
+/* 124 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var db = __webpack_require__(150)
-	var ctz = __webpack_require__(135).countTrailingZeros
+	var db = __webpack_require__(116)
+	var ctz = __webpack_require__(101).countTrailingZeros
 	
 	module.exports = ctzNumber
 	
@@ -57618,14 +57097,14 @@
 
 
 /***/ },
-/* 159 */
+/* 125 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
 	module.exports = float2rat
 	
-	var rat = __webpack_require__(144)
+	var rat = __webpack_require__(110)
 	
 	function float2rat(v) {
 	  var result = new Array(v.length)
@@ -57637,12 +57116,12 @@
 
 
 /***/ },
-/* 160 */
+/* 126 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict"
 	
-	var doubleBits = __webpack_require__(150)
+	var doubleBits = __webpack_require__(116)
 	
 	var SMALLEST_DENORM = Math.pow(2, -1074)
 	var UINT_MAX = (-1)>>>0
@@ -57684,20 +57163,20 @@
 	}
 
 /***/ },
-/* 161 */
+/* 127 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
 	module.exports = solveIntersection
 	
-	var ratMul = __webpack_require__(162)
-	var ratDiv = __webpack_require__(154)
-	var ratSub = __webpack_require__(163)
-	var ratSign = __webpack_require__(164)
-	var rvSub = __webpack_require__(165)
-	var rvAdd = __webpack_require__(166)
-	var rvMuls = __webpack_require__(168)
+	var ratMul = __webpack_require__(128)
+	var ratDiv = __webpack_require__(120)
+	var ratSub = __webpack_require__(129)
+	var ratSign = __webpack_require__(130)
+	var rvSub = __webpack_require__(131)
+	var rvAdd = __webpack_require__(132)
+	var rvMuls = __webpack_require__(134)
 	
 	function ratPerp (a, b) {
 	  return ratSub(ratMul(a[0], b[1]), ratMul(a[1], b[0]))
@@ -57732,12 +57211,12 @@
 
 
 /***/ },
-/* 162 */
+/* 128 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var rationalize = __webpack_require__(152)
+	var rationalize = __webpack_require__(118)
 	
 	module.exports = mul
 	
@@ -57747,12 +57226,12 @@
 
 
 /***/ },
-/* 163 */
+/* 129 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var rationalize = __webpack_require__(152)
+	var rationalize = __webpack_require__(118)
 	
 	module.exports = sub
 	
@@ -57762,12 +57241,12 @@
 
 
 /***/ },
-/* 164 */
+/* 130 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bnsign = __webpack_require__(153)
+	var bnsign = __webpack_require__(119)
 	
 	module.exports = sign
 	
@@ -57777,12 +57256,12 @@
 
 
 /***/ },
-/* 165 */
+/* 131 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bnsub = __webpack_require__(163)
+	var bnsub = __webpack_require__(129)
 	
 	module.exports = sub
 	
@@ -57797,12 +57276,12 @@
 
 
 /***/ },
-/* 166 */
+/* 132 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var bnadd = __webpack_require__(167)
+	var bnadd = __webpack_require__(133)
 	
 	module.exports = add
 	
@@ -57817,12 +57296,12 @@
 
 
 /***/ },
-/* 167 */
+/* 133 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var rationalize = __webpack_require__(152)
+	var rationalize = __webpack_require__(118)
 	
 	module.exports = add
 	
@@ -57834,13 +57313,13 @@
 
 
 /***/ },
-/* 168 */
+/* 134 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict'
 	
-	var rat = __webpack_require__(144)
-	var mul = __webpack_require__(162)
+	var rat = __webpack_require__(110)
+	var mul = __webpack_require__(128)
 	
 	module.exports = muls
 	
@@ -57856,7 +57335,7 @@
 
 
 /***/ },
-/* 169 */
+/* 135 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -57883,11 +57362,11 @@
 	}
 
 /***/ },
-/* 170 */
+/* 136 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var getBounds = __webpack_require__(169)
-	var unlerp = __webpack_require__(171)
+	var getBounds = __webpack_require__(135)
+	var unlerp = __webpack_require__(137)
 	
 	module.exports = normalizePathScale
 	function normalizePathScale (positions, bounds) {
@@ -57920,7 +57399,7 @@
 	}
 
 /***/ },
-/* 171 */
+/* 137 */
 /***/ function(module, exports) {
 
 	module.exports = function range(min, max, value) {
@@ -57928,7 +57407,7 @@
 	}
 
 /***/ },
-/* 172 */
+/* 138 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -57947,7 +57426,7 @@
 
 
 /***/ },
-/* 173 */
+/* 139 */
 /***/ function(module, exports) {
 
 	/*
@@ -58043,11 +57522,11 @@
 
 
 /***/ },
-/* 174 */
+/* 140 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var simplifyRadialDist = __webpack_require__(175)
-	var simplifyDouglasPeucker = __webpack_require__(176)
+	var simplifyRadialDist = __webpack_require__(141)
+	var simplifyDouglasPeucker = __webpack_require__(142)
 	
 	//simplifies using both algorithms
 	module.exports = function simplify(points, tolerance) {
@@ -58060,7 +57539,7 @@
 	module.exports.douglasPeucker = simplifyDouglasPeucker;
 
 /***/ },
-/* 175 */
+/* 141 */
 /***/ function(module, exports) {
 
 	function getSqDist(p1, p2) {
@@ -58096,7 +57575,7 @@
 	}
 
 /***/ },
-/* 176 */
+/* 142 */
 /***/ function(module, exports) {
 
 	// square distance from a point to a segment
@@ -58164,7 +57643,7 @@
 
 
 /***/ },
-/* 177 */
+/* 143 */
 /***/ function(module, exports) {
 
 	var exports = function exports(element, fn) {
@@ -58264,7 +57743,7 @@
 
 
 /***/ },
-/* 178 */
+/* 144 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var inherits = __webpack_require__(42)
@@ -58322,28 +57801,920 @@
 	}
 
 /***/ },
+/* 145 */
+/***/ function(module, exports) {
+
+	module.exports = "attribute vec3 direction;\nattribute vec3 centroid;\nattribute vec3 random;\n\nuniform vec3 color;\nuniform float animate;\nuniform float spin;\nuniform float opacity;\nuniform float scale;\n\n#define PI 3.1415\n\nvoid main() {\n  // rotate the triangles\n  // each half rotates the opposite direction\n  float swirl = 2.0;\n  float theta = (1.0 - animate) * (PI * swirl) * sign(centroid.x);\n  float theta2 = (1.0 - spin) * (PI * 2.0);\n  \n  mat3 rotMat = mat3(\n    vec3(cos(theta), 0.0, sin(theta)),\n    vec3(0.0, 1.0, 0.0),\n    vec3(-sin(theta), 0.0, cos(theta))\n  );\n  mat3 rotMat2 = mat3(\n    vec3(1.0, 0.0, 0.0),\n    vec3(0.0, cos(-2.0 * direction.y), -sin(-2.0 * direction.y)),\n    vec3(0.0, sin(-2.0 * direction.y), cos(-2.0 * direction.y))\n  );\n  mat3 rotMat3 = mat3(\n    vec3(cos(theta2), -sin(theta2), 0.0),\n    vec3(sin(theta2), cos(theta2), 0.0),\n    vec3(0.0, 0.0, 1.0)\n  );\n  \n  vec3 offset = mix(vec3(0.0), direction.xyz * rotMat, 1.0 - animate);\n  vec3 spin = position.xyz * rotMat3;\n  // scale triangles to their centroids\n  vec3 tPos = mix(mix(centroid.xyz, spin, animate), spin * rotMat2, 1.0 - animate) + offset;\n  vec3 pos = tPos;\n  \n  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);\n}"
+
+/***/ },
+/* 146 */
+/***/ function(module, exports) {
+
+	module.exports = "uniform float animate;\nuniform float opacity;\nuniform vec3 color;\n\nvoid main() {\n  gl_FragColor = vec4(color, opacity);\n}"
+
+/***/ },
+/* 147 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(THREE) {'use strict';
+	
+	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+	
+	var triangleCentroid = __webpack_require__(148);
+	var randomVec3 = __webpack_require__(149).random;
+	
+	module.exports = {
+		getAnimationAttributes: function getAnimationAttributes(positions, cells) {
+			var directions = new Float32Array(cells.length * 9);
+			var centroids = new Float32Array(cells.length * 9);
+			for (var i = 0, i9 = 0; i < cells.length; i++, i9 += 9) {
+				var _cells$i = _slicedToArray(cells[i], 3),
+				    f0 = _cells$i[0],
+				    f1 = _cells$i[1],
+				    f2 = _cells$i[2];
+	
+				var triangle = [positions[f0], positions[f1], positions[f2]];
+				var center = triangleCentroid(triangle);
+				centroids[i9] = center[0];
+				centroids[i9 + 1] = center[1];
+				centroids[i9 + 2] = center[2];
+	
+				centroids[i9 + 3] = center[0];
+				centroids[i9 + 4] = center[1];
+				centroids[i9 + 5] = center[2];
+	
+				centroids[i9 + 6] = center[0];
+				centroids[i9 + 7] = center[1];
+				centroids[i9 + 8] = center[2];
+	
+				var random = randomVec3([], Math.random());
+				directions[i9] = random[0];
+				directions[i9 + 1] = random[1];
+				directions[i9 + 2] = random[2];
+	
+				directions[i9 + 3] = random[0];
+				directions[i9 + 4] = random[1];
+				directions[i9 + 5] = random[2];
+	
+				directions[i9 + 6] = random[0];
+				directions[i9 + 7] = random[1];
+				directions[i9 + 8] = random[2];
+			}
+	
+			return {
+				direction: new THREE.BufferAttribute(directions, 3),
+				centroid: new THREE.BufferAttribute(centroids, 3)
+			};
+		}
+	};
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
+
+/***/ },
+/* 148 */
+/***/ function(module, exports) {
+
+	module.exports = triangleCentroid
+	function triangleCentroid (triangle) {
+	  if (triangle.length !== 3) {
+	    throw new TypeError('must provide triangle array of length 3')
+	  }
+	
+	  var dimension = triangle[0].length
+	  var result = new Array(dimension)
+	  for (var i = 0; i < dimension; i++) {
+	    var t0 = triangle[0][i]
+	    var t1 = triangle[1][i]
+	    var t2 = triangle[2][i]
+	    result[i] = (t0 + t1 + t2) / 3
+	  }
+	  return result
+	}
+
+
+/***/ },
+/* 149 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = {
+	  create: __webpack_require__(150)
+	  , clone: __webpack_require__(151)
+	  , angle: __webpack_require__(152)
+	  , fromValues: __webpack_require__(153)
+	  , copy: __webpack_require__(156)
+	  , set: __webpack_require__(157)
+	  , add: __webpack_require__(158)
+	  , subtract: __webpack_require__(159)
+	  , multiply: __webpack_require__(160)
+	  , divide: __webpack_require__(161)
+	  , min: __webpack_require__(162)
+	  , max: __webpack_require__(163)
+	  , scale: __webpack_require__(164)
+	  , scaleAndAdd: __webpack_require__(165)
+	  , distance: __webpack_require__(166)
+	  , squaredDistance: __webpack_require__(167)
+	  , length: __webpack_require__(168)
+	  , squaredLength: __webpack_require__(169)
+	  , negate: __webpack_require__(170)
+	  , inverse: __webpack_require__(171)
+	  , normalize: __webpack_require__(154)
+	  , dot: __webpack_require__(155)
+	  , cross: __webpack_require__(172)
+	  , lerp: __webpack_require__(173)
+	  , random: __webpack_require__(174)
+	  , transformMat4: __webpack_require__(175)
+	  , transformMat3: __webpack_require__(176)
+	  , transformQuat: __webpack_require__(177)
+	  , rotateX: __webpack_require__(178)
+	  , rotateY: __webpack_require__(179)
+	  , rotateZ: __webpack_require__(180)
+	  , forEach: __webpack_require__(181)
+	}
+
+/***/ },
+/* 150 */
+/***/ function(module, exports) {
+
+	module.exports = create;
+	
+	/**
+	 * Creates a new, empty vec3
+	 *
+	 * @returns {vec3} a new 3D vector
+	 */
+	function create() {
+	    var out = new Float32Array(3)
+	    out[0] = 0
+	    out[1] = 0
+	    out[2] = 0
+	    return out
+	}
+
+/***/ },
+/* 151 */
+/***/ function(module, exports) {
+
+	module.exports = clone;
+	
+	/**
+	 * Creates a new vec3 initialized with values from an existing vector
+	 *
+	 * @param {vec3} a vector to clone
+	 * @returns {vec3} a new 3D vector
+	 */
+	function clone(a) {
+	    var out = new Float32Array(3)
+	    out[0] = a[0]
+	    out[1] = a[1]
+	    out[2] = a[2]
+	    return out
+	}
+
+/***/ },
+/* 152 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = angle
+	
+	var fromValues = __webpack_require__(153)
+	var normalize = __webpack_require__(154)
+	var dot = __webpack_require__(155)
+	
+	/**
+	 * Get the angle between two 3D vectors
+	 * @param {vec3} a The first operand
+	 * @param {vec3} b The second operand
+	 * @returns {Number} The angle in radians
+	 */
+	function angle(a, b) {
+	    var tempA = fromValues(a[0], a[1], a[2])
+	    var tempB = fromValues(b[0], b[1], b[2])
+	 
+	    normalize(tempA, tempA)
+	    normalize(tempB, tempB)
+	 
+	    var cosine = dot(tempA, tempB)
+	
+	    if(cosine > 1.0){
+	        return 0
+	    } else {
+	        return Math.acos(cosine)
+	    }     
+	}
+
+
+/***/ },
+/* 153 */
+/***/ function(module, exports) {
+
+	module.exports = fromValues;
+	
+	/**
+	 * Creates a new vec3 initialized with the given values
+	 *
+	 * @param {Number} x X component
+	 * @param {Number} y Y component
+	 * @param {Number} z Z component
+	 * @returns {vec3} a new 3D vector
+	 */
+	function fromValues(x, y, z) {
+	    var out = new Float32Array(3)
+	    out[0] = x
+	    out[1] = y
+	    out[2] = z
+	    return out
+	}
+
+/***/ },
+/* 154 */
+/***/ function(module, exports) {
+
+	module.exports = normalize;
+	
+	/**
+	 * Normalize a vec3
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a vector to normalize
+	 * @returns {vec3} out
+	 */
+	function normalize(out, a) {
+	    var x = a[0],
+	        y = a[1],
+	        z = a[2]
+	    var len = x*x + y*y + z*z
+	    if (len > 0) {
+	        //TODO: evaluate use of glm_invsqrt here?
+	        len = 1 / Math.sqrt(len)
+	        out[0] = a[0] * len
+	        out[1] = a[1] * len
+	        out[2] = a[2] * len
+	    }
+	    return out
+	}
+
+/***/ },
+/* 155 */
+/***/ function(module, exports) {
+
+	module.exports = dot;
+	
+	/**
+	 * Calculates the dot product of two vec3's
+	 *
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {Number} dot product of a and b
+	 */
+	function dot(a, b) {
+	    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+	}
+
+/***/ },
+/* 156 */
+/***/ function(module, exports) {
+
+	module.exports = copy;
+	
+	/**
+	 * Copy the values from one vec3 to another
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the source vector
+	 * @returns {vec3} out
+	 */
+	function copy(out, a) {
+	    out[0] = a[0]
+	    out[1] = a[1]
+	    out[2] = a[2]
+	    return out
+	}
+
+/***/ },
+/* 157 */
+/***/ function(module, exports) {
+
+	module.exports = set;
+	
+	/**
+	 * Set the components of a vec3 to the given values
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {Number} x X component
+	 * @param {Number} y Y component
+	 * @param {Number} z Z component
+	 * @returns {vec3} out
+	 */
+	function set(out, x, y, z) {
+	    out[0] = x
+	    out[1] = y
+	    out[2] = z
+	    return out
+	}
+
+/***/ },
+/* 158 */
+/***/ function(module, exports) {
+
+	module.exports = add;
+	
+	/**
+	 * Adds two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function add(out, a, b) {
+	    out[0] = a[0] + b[0]
+	    out[1] = a[1] + b[1]
+	    out[2] = a[2] + b[2]
+	    return out
+	}
+
+/***/ },
+/* 159 */
+/***/ function(module, exports) {
+
+	module.exports = subtract;
+	
+	/**
+	 * Subtracts vector b from vector a
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function subtract(out, a, b) {
+	    out[0] = a[0] - b[0]
+	    out[1] = a[1] - b[1]
+	    out[2] = a[2] - b[2]
+	    return out
+	}
+
+/***/ },
+/* 160 */
+/***/ function(module, exports) {
+
+	module.exports = multiply;
+	
+	/**
+	 * Multiplies two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function multiply(out, a, b) {
+	    out[0] = a[0] * b[0]
+	    out[1] = a[1] * b[1]
+	    out[2] = a[2] * b[2]
+	    return out
+	}
+
+/***/ },
+/* 161 */
+/***/ function(module, exports) {
+
+	module.exports = divide;
+	
+	/**
+	 * Divides two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function divide(out, a, b) {
+	    out[0] = a[0] / b[0]
+	    out[1] = a[1] / b[1]
+	    out[2] = a[2] / b[2]
+	    return out
+	}
+
+/***/ },
+/* 162 */
+/***/ function(module, exports) {
+
+	module.exports = min;
+	
+	/**
+	 * Returns the minimum of two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function min(out, a, b) {
+	    out[0] = Math.min(a[0], b[0])
+	    out[1] = Math.min(a[1], b[1])
+	    out[2] = Math.min(a[2], b[2])
+	    return out
+	}
+
+/***/ },
+/* 163 */
+/***/ function(module, exports) {
+
+	module.exports = max;
+	
+	/**
+	 * Returns the maximum of two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function max(out, a, b) {
+	    out[0] = Math.max(a[0], b[0])
+	    out[1] = Math.max(a[1], b[1])
+	    out[2] = Math.max(a[2], b[2])
+	    return out
+	}
+
+/***/ },
+/* 164 */
+/***/ function(module, exports) {
+
+	module.exports = scale;
+	
+	/**
+	 * Scales a vec3 by a scalar number
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the vector to scale
+	 * @param {Number} b amount to scale the vector by
+	 * @returns {vec3} out
+	 */
+	function scale(out, a, b) {
+	    out[0] = a[0] * b
+	    out[1] = a[1] * b
+	    out[2] = a[2] * b
+	    return out
+	}
+
+/***/ },
+/* 165 */
+/***/ function(module, exports) {
+
+	module.exports = scaleAndAdd;
+	
+	/**
+	 * Adds two vec3's after scaling the second operand by a scalar value
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @param {Number} scale the amount to scale b by before adding
+	 * @returns {vec3} out
+	 */
+	function scaleAndAdd(out, a, b, scale) {
+	    out[0] = a[0] + (b[0] * scale)
+	    out[1] = a[1] + (b[1] * scale)
+	    out[2] = a[2] + (b[2] * scale)
+	    return out
+	}
+
+/***/ },
+/* 166 */
+/***/ function(module, exports) {
+
+	module.exports = distance;
+	
+	/**
+	 * Calculates the euclidian distance between two vec3's
+	 *
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {Number} distance between a and b
+	 */
+	function distance(a, b) {
+	    var x = b[0] - a[0],
+	        y = b[1] - a[1],
+	        z = b[2] - a[2]
+	    return Math.sqrt(x*x + y*y + z*z)
+	}
+
+/***/ },
+/* 167 */
+/***/ function(module, exports) {
+
+	module.exports = squaredDistance;
+	
+	/**
+	 * Calculates the squared euclidian distance between two vec3's
+	 *
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {Number} squared distance between a and b
+	 */
+	function squaredDistance(a, b) {
+	    var x = b[0] - a[0],
+	        y = b[1] - a[1],
+	        z = b[2] - a[2]
+	    return x*x + y*y + z*z
+	}
+
+/***/ },
+/* 168 */
+/***/ function(module, exports) {
+
+	module.exports = length;
+	
+	/**
+	 * Calculates the length of a vec3
+	 *
+	 * @param {vec3} a vector to calculate length of
+	 * @returns {Number} length of a
+	 */
+	function length(a) {
+	    var x = a[0],
+	        y = a[1],
+	        z = a[2]
+	    return Math.sqrt(x*x + y*y + z*z)
+	}
+
+/***/ },
+/* 169 */
+/***/ function(module, exports) {
+
+	module.exports = squaredLength;
+	
+	/**
+	 * Calculates the squared length of a vec3
+	 *
+	 * @param {vec3} a vector to calculate squared length of
+	 * @returns {Number} squared length of a
+	 */
+	function squaredLength(a) {
+	    var x = a[0],
+	        y = a[1],
+	        z = a[2]
+	    return x*x + y*y + z*z
+	}
+
+/***/ },
+/* 170 */
+/***/ function(module, exports) {
+
+	module.exports = negate;
+	
+	/**
+	 * Negates the components of a vec3
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a vector to negate
+	 * @returns {vec3} out
+	 */
+	function negate(out, a) {
+	    out[0] = -a[0]
+	    out[1] = -a[1]
+	    out[2] = -a[2]
+	    return out
+	}
+
+/***/ },
+/* 171 */
+/***/ function(module, exports) {
+
+	module.exports = inverse;
+	
+	/**
+	 * Returns the inverse of the components of a vec3
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a vector to invert
+	 * @returns {vec3} out
+	 */
+	function inverse(out, a) {
+	  out[0] = 1.0 / a[0]
+	  out[1] = 1.0 / a[1]
+	  out[2] = 1.0 / a[2]
+	  return out
+	}
+
+/***/ },
+/* 172 */
+/***/ function(module, exports) {
+
+	module.exports = cross;
+	
+	/**
+	 * Computes the cross product of two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @returns {vec3} out
+	 */
+	function cross(out, a, b) {
+	    var ax = a[0], ay = a[1], az = a[2],
+	        bx = b[0], by = b[1], bz = b[2]
+	
+	    out[0] = ay * bz - az * by
+	    out[1] = az * bx - ax * bz
+	    out[2] = ax * by - ay * bx
+	    return out
+	}
+
+/***/ },
+/* 173 */
+/***/ function(module, exports) {
+
+	module.exports = lerp;
+	
+	/**
+	 * Performs a linear interpolation between two vec3's
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @param {Number} t interpolation amount between the two inputs
+	 * @returns {vec3} out
+	 */
+	function lerp(out, a, b, t) {
+	    var ax = a[0],
+	        ay = a[1],
+	        az = a[2]
+	    out[0] = ax + t * (b[0] - ax)
+	    out[1] = ay + t * (b[1] - ay)
+	    out[2] = az + t * (b[2] - az)
+	    return out
+	}
+
+/***/ },
+/* 174 */
+/***/ function(module, exports) {
+
+	module.exports = random;
+	
+	/**
+	 * Generates a random vector with the given scale
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
+	 * @returns {vec3} out
+	 */
+	function random(out, scale) {
+	    scale = scale || 1.0
+	
+	    var r = Math.random() * 2.0 * Math.PI
+	    var z = (Math.random() * 2.0) - 1.0
+	    var zScale = Math.sqrt(1.0-z*z) * scale
+	
+	    out[0] = Math.cos(r) * zScale
+	    out[1] = Math.sin(r) * zScale
+	    out[2] = z * scale
+	    return out
+	}
+
+/***/ },
+/* 175 */
+/***/ function(module, exports) {
+
+	module.exports = transformMat4;
+	
+	/**
+	 * Transforms the vec3 with a mat4.
+	 * 4th vector component is implicitly '1'
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the vector to transform
+	 * @param {mat4} m matrix to transform with
+	 * @returns {vec3} out
+	 */
+	function transformMat4(out, a, m) {
+	    var x = a[0], y = a[1], z = a[2],
+	        w = m[3] * x + m[7] * y + m[11] * z + m[15]
+	    w = w || 1.0
+	    out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w
+	    out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w
+	    out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w
+	    return out
+	}
+
+/***/ },
+/* 176 */
+/***/ function(module, exports) {
+
+	module.exports = transformMat3;
+	
+	/**
+	 * Transforms the vec3 with a mat3.
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the vector to transform
+	 * @param {mat4} m the 3x3 matrix to transform with
+	 * @returns {vec3} out
+	 */
+	function transformMat3(out, a, m) {
+	    var x = a[0], y = a[1], z = a[2]
+	    out[0] = x * m[0] + y * m[3] + z * m[6]
+	    out[1] = x * m[1] + y * m[4] + z * m[7]
+	    out[2] = x * m[2] + y * m[5] + z * m[8]
+	    return out
+	}
+
+/***/ },
+/* 177 */
+/***/ function(module, exports) {
+
+	module.exports = transformQuat;
+	
+	/**
+	 * Transforms the vec3 with a quat
+	 *
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the vector to transform
+	 * @param {quat} q quaternion to transform with
+	 * @returns {vec3} out
+	 */
+	function transformQuat(out, a, q) {
+	    // benchmarks: http://jsperf.com/quaternion-transform-vec3-implementations
+	
+	    var x = a[0], y = a[1], z = a[2],
+	        qx = q[0], qy = q[1], qz = q[2], qw = q[3],
+	
+	        // calculate quat * vec
+	        ix = qw * x + qy * z - qz * y,
+	        iy = qw * y + qz * x - qx * z,
+	        iz = qw * z + qx * y - qy * x,
+	        iw = -qx * x - qy * y - qz * z
+	
+	    // calculate result * inverse quat
+	    out[0] = ix * qw + iw * -qx + iy * -qz - iz * -qy
+	    out[1] = iy * qw + iw * -qy + iz * -qx - ix * -qz
+	    out[2] = iz * qw + iw * -qz + ix * -qy - iy * -qx
+	    return out
+	}
+
+/***/ },
+/* 178 */
+/***/ function(module, exports) {
+
+	module.exports = rotateX;
+	
+	/**
+	 * Rotate a 3D vector around the x-axis
+	 * @param {vec3} out The receiving vec3
+	 * @param {vec3} a The vec3 point to rotate
+	 * @param {vec3} b The origin of the rotation
+	 * @param {Number} c The angle of rotation
+	 * @returns {vec3} out
+	 */
+	function rotateX(out, a, b, c){
+	    var p = [], r=[]
+	    //Translate point to the origin
+	    p[0] = a[0] - b[0]
+	    p[1] = a[1] - b[1]
+	    p[2] = a[2] - b[2]
+	
+	    //perform rotation
+	    r[0] = p[0]
+	    r[1] = p[1]*Math.cos(c) - p[2]*Math.sin(c)
+	    r[2] = p[1]*Math.sin(c) + p[2]*Math.cos(c)
+	
+	    //translate to correct position
+	    out[0] = r[0] + b[0]
+	    out[1] = r[1] + b[1]
+	    out[2] = r[2] + b[2]
+	
+	    return out
+	}
+
+/***/ },
 /* 179 */
 /***/ function(module, exports) {
 
-	module.exports = "attribute vec3 direction;\nattribute vec3 centroid;\nattribute vec3 random;\n\nuniform float animate;\nuniform float opacity;\nuniform float scale;\n\nvarying vec3 color;\n\n#define PI 3.1415\n\nvoid main() {\n  // rotate the triangles\n  // each half rotates the opposite direction\n  float swirl = 1.0;\n  float theta = (1.0 - animate) * (PI * swirl) * sign(centroid.x);\n  //float theta = (1.0 - animate) * (PI * 1.5);\n  mat3 rotMat = mat3(\n    vec3(cos(theta), 0.0, sin(theta)),\n    vec3(0.0, 1.0, 0.0),\n    vec3(-sin(theta), 0.0, cos(theta))\n  );\n  mat3 rotMat2 = mat3(\n    vec3(1.0, 0.0, 0.0),\n    vec3(0.0, cos(-2.0 * direction.y), -sin(-2.0 * direction.y)),\n    vec3(0.0, sin(-2.0 * direction.y), cos(-2.0 * direction.y))\n  );\n  \n  vec3 offset = mix(vec3(0.0), direction.xyz * rotMat, 1.0 - animate);\n  // scale triangles to their centroids\n  vec3 tPos = mix(mix(centroid.xyz, position.xyz, scale), position.xyz * rotMat2, 1.0 - animate) + offset;\n\n  color = vec3(1.0);\n  \n  gl_Position = projectionMatrix * modelViewMatrix * vec4(tPos, 1.0);\n  //gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}"
+	module.exports = rotateY;
+	
+	/**
+	 * Rotate a 3D vector around the y-axis
+	 * @param {vec3} out The receiving vec3
+	 * @param {vec3} a The vec3 point to rotate
+	 * @param {vec3} b The origin of the rotation
+	 * @param {Number} c The angle of rotation
+	 * @returns {vec3} out
+	 */
+	function rotateY(out, a, b, c){
+	    var p = [], r=[]
+	    //Translate point to the origin
+	    p[0] = a[0] - b[0]
+	    p[1] = a[1] - b[1]
+	    p[2] = a[2] - b[2]
+	  
+	    //perform rotation
+	    r[0] = p[2]*Math.sin(c) + p[0]*Math.cos(c)
+	    r[1] = p[1]
+	    r[2] = p[2]*Math.cos(c) - p[0]*Math.sin(c)
+	  
+	    //translate to correct position
+	    out[0] = r[0] + b[0]
+	    out[1] = r[1] + b[1]
+	    out[2] = r[2] + b[2]
+	  
+	    return out
+	}
 
 /***/ },
 /* 180 */
 /***/ function(module, exports) {
 
-	module.exports = "uniform float animate;\nuniform float opacity;\nvarying vec3 color;\n\nvoid main() {\n  gl_FragColor = vec4(color, opacity);\n}"
+	module.exports = rotateZ;
+	
+	/**
+	 * Rotate a 3D vector around the z-axis
+	 * @param {vec3} out The receiving vec3
+	 * @param {vec3} a The vec3 point to rotate
+	 * @param {vec3} b The origin of the rotation
+	 * @param {Number} c The angle of rotation
+	 * @returns {vec3} out
+	 */
+	function rotateZ(out, a, b, c){
+	    var p = [], r=[]
+	    //Translate point to the origin
+	    p[0] = a[0] - b[0]
+	    p[1] = a[1] - b[1]
+	    p[2] = a[2] - b[2]
+	  
+	    //perform rotation
+	    r[0] = p[0]*Math.cos(c) - p[1]*Math.sin(c)
+	    r[1] = p[0]*Math.sin(c) + p[1]*Math.cos(c)
+	    r[2] = p[2]
+	  
+	    //translate to correct position
+	    out[0] = r[0] + b[0]
+	    out[1] = r[1] + b[1]
+	    out[2] = r[2] + b[2]
+	  
+	    return out
+	}
 
 /***/ },
 /* 181 */
 /***/ function(module, exports, __webpack_require__) {
 
+	module.exports = forEach;
+	
+	var vec = __webpack_require__(150)()
+	
+	/**
+	 * Perform some operation over an array of vec3s.
+	 *
+	 * @param {Array} a the array of vectors to iterate over
+	 * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
+	 * @param {Number} offset Number of elements to skip at the beginning of the array
+	 * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
+	 * @param {Function} fn Function to call for each vector in the array
+	 * @param {Object} [arg] additional argument to pass to fn
+	 * @returns {Array} a
+	 * @function
+	 */
+	function forEach(a, stride, offset, count, fn, arg) {
+	        var i, l
+	        if(!stride) {
+	            stride = 3
+	        }
+	
+	        if(!offset) {
+	            offset = 0
+	        }
+	        
+	        if(count) {
+	            l = Math.min((count * stride) + offset, a.length)
+	        } else {
+	            l = a.length
+	        }
+	
+	        for(i = offset; i < l; i += stride) {
+	            vec[0] = a[i] 
+	            vec[1] = a[i+1] 
+	            vec[2] = a[i+2]
+	            fn(vec, vec, arg)
+	            a[i] = vec[0] 
+	            a[i+1] = vec[1] 
+	            a[i+2] = vec[2]
+	        }
+	        
+	        return a
+	}
+
+/***/ },
+/* 182 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 	
 	// load the styles
-	var content = __webpack_require__(182);
+	var content = __webpack_require__(183);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(184)(content, {});
+	var update = __webpack_require__(185)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -58360,21 +58731,21 @@
 	}
 
 /***/ },
-/* 182 */
+/* 183 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(183)();
+	exports = module.exports = __webpack_require__(184)();
 	// imports
 	
 	
 	// module
-	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  height: 100%;\n  font-family: 'Nunito Sans', sans-serif; }\n\n.hljs {\n  padding: 12px; }\n\ncode {\n  padding: 12px;\n  white-space: normal; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\n.shards {\n  height: 400px; }\n\n.main {\n  max-width: 1020px;\n  padding: 24px; }\n  .main .content {\n    padding: 12px;\n    background: #eee;\n    color: #000; }\n  .main #frame {\n    font-family: 'Share Tech Mono', monospace;\n    color: #333; }\n", ""]);
+	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  font-family: 'Nunito Sans', sans-serif; }\n\n.hljs {\n  padding: 12px; }\n\n.hljs-tag {\n  display: block; }\n\ncode {\n  padding: 12px;\n  white-space: normal; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\n.shards {\n  height: 400px; }\n\n.main {\n  max-width: 1020px;\n  padding: 24px; }\n  .main .content {\n    padding: 12px;\n    background: #eee;\n    color: #000; }\n  .main #frame {\n    font-family: 'Share Tech Mono', monospace;\n    color: #333; }\n", ""]);
 	
 	// exports
 
 
 /***/ },
-/* 183 */
+/* 184 */
 /***/ function(module, exports) {
 
 	/*
@@ -58430,7 +58801,7 @@
 
 
 /***/ },
-/* 184 */
+/* 185 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -58446,7 +58817,7 @@
 			};
 		},
 		isOldIE = memoize(function() {
-			return /msie [6-9]\b/.test(window.navigator.userAgent.toLowerCase());
+			return /msie [6-9]\b/.test(self.navigator.userAgent.toLowerCase());
 		}),
 		getHeadElement = memoize(function () {
 			return document.head || document.getElementsByTagName("head")[0];
