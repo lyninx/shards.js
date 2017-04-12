@@ -10,7 +10,6 @@ export default class Animate {
 		this.material = material
 		this._bind('play', 'explode')
 		this.enabled = true
-		console.log(this)
 	}
 
 	_bind(...methods) {
@@ -46,8 +45,11 @@ export default class Animate {
 
 	stop() {
 		this.enabled = false
+		console.log("animation cancelled")
 		this.tween.cancel()
 		this.material.uniforms.animate.value = 1.0
+		this.material.uniforms.opacity.value = 1.0
+		this.material.uniforms.spin.value = 1.0
 	}
 	fade_in(dur, delay=0){
 		this.tween = tweenr.to(this.material.uniforms.opacity, {

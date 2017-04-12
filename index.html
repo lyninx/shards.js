@@ -9,18 +9,18 @@
     <link href="https://fonts.googleapis.com/css?family=Nunito+Sans:400,700|Share+Tech+Mono" rel="stylesheet">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/styles/default.min.css">
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/highlight.min.js"></script>
-    <title>shards.js</title>
+    <title>WebGL Composer</title>
 </head>
 <body>
     <div class="main">
-    <h2>shards.js</h2>
-    <shards-canvas class="shards" background="#ff5454" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70>
-    	<svg-layer src="./lyninx_inkscape.svg" color="#fff" z_depth="0.0" scale="1.0">
-        <animation type="explode" duration="4.0" delay="4.0" looping="true"></animation>
-        <animation type="spin" duration="48.0" delay="0.0" looping="true"></animation>
-        <animation type="fade-in" duration="4.0" delay="2.0" looping="true"></animation>
-      </svg-layer>
-    </shards-canvas>
+    <h2>WebGL Composer</h2>
+    <webgl-composer class="shards" background="#ff5454" zoom=2.0 x_offset=0.0 y_offset=0.0 fov=70>
+    	<c-layer src="./lyninx.svg" color="#fff" z_depth="0.0" scale="1.0">
+        <c-animation type="explode" duration="4.0" delay="4.0" looping="true"></c-animation>
+        <c-animation type="spin" duration="120.0" delay="0.0" looping="true"></c-animation>
+        <c-animation type="fade-in" duration="2.0" delay="0.0" looping="true"></c-animation>
+      </c-layer>
+    </webgl-composer>
     <pre><code class="html" id="example"></code></pre>
     <div class="content card">
         shards allows you to easily harness the power of webGL to create looping SVG animations.

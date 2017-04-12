@@ -17,6 +17,7 @@ export default class Layer {
         this.params = params
         this.mesh = undefined
         this.material = undefined
+        this.animations = []
         this.ready = ready
 
         this._bind('_create', '_loadSVG', '_update')
@@ -44,35 +45,36 @@ export default class Layer {
                 spin: { type: 'f', value: 1 }
             }
         })
-
         this._loadSVG().then((mesh) => {
+
             this.mesh = mesh
             this.ready.call()
-            this.animations = []
+            this._init_animations()
+        })
+    }
+
+    _update(params, ready) {
+        this.params = params
+        this._loadSVG().then((mesh) => {
+            this.mesh = mesh
+            this.animations.forEach((animation, index, array) => {
+                animation.stop()
+            })
+            this.material.uniforms.color.value = new THREE.Color(this.params.color)
             this.params.animations.forEach((anim) => {
                 let animation = new Animate(this.material, this.mesh, anim.type, anim.duration, anim.delay)
                 animation.play()
                 this.animations.push(animation)
             })
+            ready(this)
         })
+
     }
 
-    _update(params, ready) {
-        // this.params = params
-        // this._loadSVG().then((mesh) => {
-        //     this.mesh = mesh
-        //     this.animations.forEach((animation, index, array) => {
-        //         animation.stop()
-        //         array.splice(index, 1)
-        //     })
-        //     this.material.uniforms.color.value = new THREE.Color(this.params.color)
-        //     this.animations.push(new Animate(this.material, this.mesh, this.params.animation, this.params.duration, this.params.delay))
-        //     this.animations.forEach((animation) => {
-        //         animation.play()
-        //     })
-        //     ready(this)
-        // })
-
+    _init_animations() {
+        this._update(this.params, () => {
+            console.log("animations loaded")
+        })
     }
 
     // load svg 

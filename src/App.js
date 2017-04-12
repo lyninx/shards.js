@@ -17,10 +17,9 @@ export default class App {
         this.shadow = shadow
         this.config = {}
 
-        this._bind('_render', '_handleResize', '_update', '_create', '_create_layers', '_setupDOM')
+        this._bind('_render', '_handleResize', '_update', '_create', '_create_layers', '_init_layers', '_setupDOM')
         this._time = 0.0
         this._create()
-        this._create_layers()
         this._setup3D()
         this._setupDOM()
         this._createScene()      
@@ -43,10 +42,17 @@ export default class App {
         this.config.y_offset = parseFloat(this.element.getAttribute("y_offset")) || 0.0
         this.config.fov = parseFloat(this.element.getAttribute("fov"))           || 70
     }
-
+    _get_layers() {
+        return this.layers
+    }
+    _init_layers() {
+        this._create_layers()
+        this._observe_layers()
+    }
     _create_layers() {
         this.layers = []
         let children = [].slice.call(this.element.children)
+        // wow. this need refactoring
         children.forEach((elem) => {
             let params = this._get_layer_params(elem)
             this.layers.push({
@@ -55,6 +61,14 @@ export default class App {
                 params: params
             })
         })
+        this.layers.forEach((l) => {
+            let layer = l.layer = new Layer(l.tag, l.params, () => {
+                // mesh loaded into scene
+                console.log("> loaded "+l.tag)
+                this._scene.add(layer.mesh)
+                l.mesh = layer.mesh
+            })
+        }) 
     }
 
     _get_layer_params(elem) {
@@ -91,7 +105,6 @@ export default class App {
     }
 
     _setupDOM() {
-        // elementResize(this.element, this._handleResize)
         let self = this
         this.mutation_observer = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver
         var observer = new MutationObserver(function(mutations) {
@@ -110,7 +123,13 @@ export default class App {
         observer.observe(this.element, {
             attributes: true 
         })
+        window.addEventListener('resize', this._handleResize)
 
+        this.element.addEventListener('resize', this._handleResize)
+        this.shadow.appendChild(this._renderer.domElement)
+    }
+    _observe_layers(){
+        let self = this
         let children = [].slice.call(this.element.children)
         children.forEach((e) => {
             var observer = new MutationObserver(function(mutations) {
@@ -123,6 +142,7 @@ export default class App {
                         modified_layer.elem = e
                         modified_layer.params = self._get_layer_params(e)
                         self._scene.remove(modified_layer.mesh)
+                        console.log(self._scene)
                         modified_layer.layer._update(modified_layer.params, (updated_layer) => {
                             modified_layer.mesh = updated_layer.mesh
                             self._scene.add(updated_layer.mesh)   
@@ -134,27 +154,36 @@ export default class App {
                 attributes: true 
             })
         })
-        window.addEventListener('resize', this._handleResize)
-
-        this.element.addEventListener('resize', this._handleResize)
-        this.shadow.appendChild(this._renderer.domElement)
+    }
+    _observe_animations(anim_element){
+        let self = this
+        let observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type == "attributes") {
+                    console.log("animation attributes changed")
+                        let modified_layer = self.layers.find((layer) => {
+                            return layer.elem === anim_element.parentNode
+                        })
+                        modified_layer.elem = anim_element.parentNode
+                        modified_layer.params = self._get_layer_params(anim_element.parentNode)
+                        self._scene.remove(modified_layer.mesh)
+                        modified_layer.layer._update(modified_layer.params, (updated_layer) => {
+                            modified_layer.mesh = updated_layer.mesh
+                            self._scene.add(updated_layer.mesh)   
+                        })
+                }
+            })
+        })
+        observer.observe(anim_element, {
+            attributes: true 
+        })    
     }
 
     _createScene() {
         const scene = this._scene
 
         this.frame = 0
-        this.prev_frame = -1
-
-        this.layers.forEach((l) => {
-            let layer = l.layer = new Layer(l.tag, l.params, () => {
-                // mesh loaded into scene
-                console.log("> loaded "+l.tag)
-                scene.add(layer.mesh)
-                l.mesh = layer.mesh
-            })
-        })
-    
+        this.prev_frame = -1  
     }
 
     _update(dt) {
