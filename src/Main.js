@@ -26,7 +26,9 @@ class LayerElement extends HTMLElement{
 		this.app._create_layer(this)
 	}
 	attributeChangedCallback(attribute, oldValue, newValue) {
-		this.parentNode.app._update_layer(this, attribute, newValue)
+		if(this.parentNode.app) {
+			this.parentNode.app._update_layer(this, attribute, newValue)	
+		}
 	}
 	disconnectedCallback(){
 		console.log("DISCONNECT")
