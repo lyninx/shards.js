@@ -86,7 +86,25 @@ export default class App {
         })
         removed.layer._destory()
     }
-
+    // _update_animation(elem) {
+    //     let params = this._get_animation_params(elem)
+    //     let layer = this.layers.find((layer) => {
+    //         return layer.elem == elem.layerNode
+    //     })
+    //     console.log(layer.layer)
+    //     layer.layer._update_animation(params)
+    // }
+    _update_animations(elem){
+        let layer = this.layers.find((layer) => {
+            return layer.elem == elem.layerNode
+        })
+        if(layer){
+            let params = this._get_layer_params(elem.layerNode)
+            layer.layer._update(params, (updated_layer) => {
+                console.log("updated layer params")
+            })
+        }
+    }
     _get_layer_params(elem) {
         let params = {}
         params.src = elem.getAttribute("src")
@@ -97,14 +115,18 @@ export default class App {
         let children = [].slice.call(elem.children)
         children.forEach((elem) => {
             // any tag name works
-            let anim = {}
-            anim.type = elem.getAttribute("type")
-            anim.duration = elem.getAttribute("duration")
-            anim.delay = elem.getAttribute("delay")
-            anim.looping = elem.getAttribute("looping") || false
-            params.animations.push(anim)
+            params.animations.push(this._get_animation_params(elem))
         })
         return params
+    }
+    _get_animation_params(elem){
+        let anim = {}
+        anim.elem = elem
+        anim.type = elem.getAttribute("type")
+        anim.duration = elem.getAttribute("duration")
+        anim.delay = elem.getAttribute("delay")
+        anim.looping = elem.getAttribute("looping") || false
+        return anim
     }
 
     _setup3D() {

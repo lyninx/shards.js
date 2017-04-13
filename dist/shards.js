@@ -119,7 +119,9 @@
 		}, {
 			key: 'attributeChangedCallback',
 			value: function attributeChangedCallback(attribute, oldValue, newValue) {
-				this.parentNode.app._update_layer(this, attribute, newValue);
+				if (this.parentNode) {
+					this.parentNode.app._update_layer(this, attribute, newValue);
+				}
 			}
 		}, {
 			key: 'disconnectedCallback',
@@ -151,7 +153,25 @@
 		_createClass(AnimationElement, [{
 			key: 'connectedCallback',
 			value: function connectedCallback() {
-				//this.parentNode.app._observe_animations(this)
+				console.log("ANIMATION ATTACHED");
+				this.app = this.parentNode.app;
+				this.layerNode = this.parentNode;
+				//this.app._update_animations(this)
+			}
+		}, {
+			key: 'attributeChangedCallback',
+			value: function attributeChangedCallback(attribute, oldValue, newValue) {
+				console.log(attribute + " changed!");
+				if (this.parentNode) {
+					console.log("YEP CHANGED");
+					this.parentNode.app._update_animations(this);
+				}
+			}
+		}, {
+			key: 'disconnectedCallback',
+			value: function disconnectedCallback() {
+				console.log("REMOVED ANIMATION");
+				this.app._update_animations(this);
 			}
 		}]);
 	
@@ -304,9 +324,33 @@
 	            });
 	            removed.layer._destory();
 	        }
+	        // _update_animation(elem) {
+	        //     let params = this._get_animation_params(elem)
+	        //     let layer = this.layers.find((layer) => {
+	        //         return layer.elem == elem.layerNode
+	        //     })
+	        //     console.log(layer.layer)
+	        //     layer.layer._update_animation(params)
+	        // }
+	
+	    }, {
+	        key: '_update_animations',
+	        value: function _update_animations(elem) {
+	            var layer = this.layers.find(function (layer) {
+	                return layer.elem == elem.layerNode;
+	            });
+	            if (layer) {
+	                var params = this._get_layer_params(elem.layerNode);
+	                layer.layer._update(params, function (updated_layer) {
+	                    console.log("updated layer params");
+	                });
+	            }
+	        }
 	    }, {
 	        key: '_get_layer_params',
 	        value: function _get_layer_params(elem) {
+	            var _this4 = this;
+	
 	            var params = {};
 	            params.src = elem.getAttribute("src");
 	            params.color = elem.getAttribute("color") || "#fff";
@@ -316,14 +360,20 @@
 	            var children = [].slice.call(elem.children);
 	            children.forEach(function (elem) {
 	                // any tag name works
-	                var anim = {};
-	                anim.type = elem.getAttribute("type");
-	                anim.duration = elem.getAttribute("duration");
-	                anim.delay = elem.getAttribute("delay");
-	                anim.looping = elem.getAttribute("looping") || false;
-	                params.animations.push(anim);
+	                params.animations.push(_this4._get_animation_params(elem));
 	            });
 	            return params;
+	        }
+	    }, {
+	        key: '_get_animation_params',
+	        value: function _get_animation_params(elem) {
+	            var anim = {};
+	            anim.elem = elem;
+	            anim.type = elem.getAttribute("type");
+	            anim.duration = elem.getAttribute("duration");
+	            anim.delay = elem.getAttribute("delay");
+	            anim.looping = elem.getAttribute("looping") || false;
+	            return anim;
 	        }
 	    }, {
 	        key: '_setup3D',
@@ -45665,6 +45715,7 @@
 	            var _this3 = this;
 	
 	            this.params = params;
+	            console.log(params);
 	            this._loadSVG().then(function (mesh) {
 	                _this3.mesh = mesh;
 	                _this3.animations.forEach(function (animation, index, array) {
@@ -45679,18 +45730,33 @@
 	                ready(_this3);
 	            });
 	        }
+	    }, {
+	        key: '_update_animations',
+	        value: function _update_animations(params) {
+	            var _this4 = this;
+	
+	            this.params.animations = params;
+	            this.animations.forEach(function (animation, index, array) {
+	                animation.stop();
+	            });
+	            this.params.animations.forEach(function (anim) {
+	                var animation = new _Animate2.default(_this4.material, _this4.mesh, anim.type, anim.duration, anim.delay);
+	                animation.play();
+	                _this4.animations.push(animation);
+	            });
+	        }
 	
 	        // load svg 
 	
 	    }, {
 	        key: '_loadSVG',
 	        value: function _loadSVG() {
-	            var _this4 = this;
+	            var _this5 = this;
 	
 	            return new Promise(function (resolve, reject) {
-	                var self = _this4;
+	                var self = _this5;
 	                // load default SVG asychronously 
-	                (0, _loadSvg2.default)(_this4.params.src, function (err, svg) {
+	                (0, _loadSvg2.default)(_this5.params.src, function (err, svg) {
 	                    if (err) reject(err);
 	
 	                    var mesh = generate_mesh(svg);

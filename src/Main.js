@@ -26,7 +26,7 @@ class LayerElement extends HTMLElement{
 		this.app._create_layer(this)
 	}
 	attributeChangedCallback(attribute, oldValue, newValue) {
-		if(this.parentNode.app) {
+		if(this.parentNode) {
 			this.parentNode.app._update_layer(this, attribute, newValue)	
 		}
 	}
@@ -42,7 +42,21 @@ class AnimationElement extends HTMLElement{
 		super()
 	}
 	connectedCallback() {
-		//this.parentNode.app._observe_animations(this)
+		console.log("ANIMATION ATTACHED")
+		this.app = this.parentNode.app
+		this.layerNode = this.parentNode
+		//this.app._update_animations(this)
+	}
+	attributeChangedCallback(attribute, oldValue, newValue) {
+		console.log(attribute + " changed!")
+		if(this.parentNode) {
+			console.log("YEP CHANGED")
+			this.parentNode.app._update_animations(this)
+		}
+	}
+	disconnectedCallback(){
+		console.log("REMOVED ANIMATION")
+		this.app._update_animations(this)
 	}
 }
 customElements.define('webgl-composer', WebGLComposerElement)

@@ -56,6 +56,7 @@ export default class Layer {
 
     _update(params, ready) {
         this.params = params
+        console.log(params)
         this._loadSVG().then((mesh) => {
             this.mesh = mesh
             this.animations.forEach((animation, index, array) => {
@@ -71,6 +72,17 @@ export default class Layer {
         })
 
     }
+    _update_animations(params) {
+        this.params.animations = params
+        this.animations.forEach((animation, index, array) => {
+            animation.stop()
+        })
+        this.params.animations.forEach((anim) => {
+            let animation = new Animate(this.material, this.mesh, anim.type, anim.duration, anim.delay)
+            animation.play()
+            this.animations.push(animation)
+        })
+    }
 
     // load svg 
     _loadSVG() {
@@ -79,7 +91,7 @@ export default class Layer {
             // load default SVG asychronously 
             loadSvg(this.params.src, function (err, svg) {
                 if (err) reject(err)
-                
+
                 let mesh = generate_mesh(svg)
                 resolve(mesh)
             })
