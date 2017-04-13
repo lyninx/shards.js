@@ -99,7 +99,7 @@
 		_createClass(LayerElement, null, [{
 			key: 'observedAttributes',
 			get: function get() {
-				return ['src', 'color', 'z_depth', 'scale'];
+				return ['src', 'color', 'x_offset', 'y_offset', 'z_depth', 'scale'];
 			}
 		}]);
 	
@@ -354,6 +354,8 @@
 	            params.src = elem.getAttribute("src");
 	            params.color = elem.getAttribute("color") || "#fff";
 	            params.z_depth = elem.getAttribute("z_depth") || 0.0;
+	            params.x_offset = elem.getAttribute("x_offset") || 0.0;
+	            params.y_offset = elem.getAttribute("y_offset") || 0.0;
 	            params.scale = elem.getAttribute("scale") || 1.0;
 	            params.animations = [];
 	            var children = [].slice.call(elem.children);
@@ -45778,7 +45780,9 @@
 	                    var scale = 16 * self.params.scale;
 	                    mesh.scale.set(scale, scale, scale);
 	                    mesh.name = self.params.svg;
-	                    mesh.position.y += 6;
+	                    mesh.position.x = parseFloat(self.params.x_offset);
+	                    mesh.position.y = parseFloat(self.params.y_offset) + 6.0;
+	                    mesh.position.z = parseFloat(self.params.z_depth);
 	
 	                    return mesh;
 	                }
