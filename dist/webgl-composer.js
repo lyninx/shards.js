@@ -58782,7 +58782,7 @@
 	
 	
 	// module
-	exports.push([module.id, "html, body {\n  margin: 0;\n  padding: 0; }\n\nbody {\n  overflow: hidden;\n  background-color: #222;\n  color: #eee;\n  width: 100%;\n  font-family: 'Nunito Sans', sans-serif; }\n\n.hljs {\n  padding: 12px; }\n\n.hljs-tag {\n  display: block; }\n\ncode {\n  padding: 12px;\n  white-space: normal; }\n\n::-webkit-input-placeholder {\n  color: #444; }\n\n:-moz-placeholder {\n  color: #444; }\n\n::-moz-placeholder {\n  color: #444; }\n\n.center {\n  margin: auto; }\n\n.shards {\n  height: 400px; }\n\n.main {\n  max-width: 1020px;\n  padding: 24px; }\n  .main .content {\n    padding: 12px;\n    background: #eee;\n    color: #000; }\n  .main #frame {\n    font-family: 'Share Tech Mono', monospace;\n    color: #333; }\n", ""]);
+	exports.push([module.id, "", ""]);
 	
 	// exports
 

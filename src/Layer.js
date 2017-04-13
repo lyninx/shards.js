@@ -112,7 +112,9 @@ export default class Layer {
                 let scale = 16 * self.params.scale
                 mesh.scale.set( scale, scale, scale )
                 mesh.name = self.params.svg
-                mesh.position.y += 6
+                mesh.position.x = parseFloat(self.params.x_offset)
+                mesh.position.y = parseFloat(self.params.y_offset) + 6.0
+                mesh.position.z = parseFloat(self.params.z_depth)
 
                 return mesh
             }

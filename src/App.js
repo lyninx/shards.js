@@ -110,6 +110,8 @@ export default class App {
         params.src = elem.getAttribute("src")
         params.color = elem.getAttribute("color") || "#fff"
         params.z_depth = elem.getAttribute("z_depth") || 0.0
+        params.x_offset = elem.getAttribute("x_offset") || 0.0
+        params.y_offset = elem.getAttribute("y_offset") || 0.0
         params.scale = elem.getAttribute("scale") || 1.0
         params.animations = []
         let children = [].slice.call(elem.children)

@@ -16,7 +16,7 @@ class WebGLComposerElement extends HTMLElement {
 }
 
 class LayerElement extends HTMLElement{
-	static get observedAttributes() {return ['src', 'color', 'z_depth', 'scale']; }
+	static get observedAttributes() {return ['src', 'color', 'x_offset', 'y_offset', 'z_depth', 'scale']; }
 	constructor() {
 		super()
 	}
