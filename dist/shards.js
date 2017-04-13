@@ -156,14 +156,13 @@
 				console.log("ANIMATION ATTACHED");
 				this.app = this.parentNode.app;
 				this.layerNode = this.parentNode;
-				//this.app._update_animations(this)
+				this.app._update_animations(this);
 			}
 		}, {
 			key: 'attributeChangedCallback',
 			value: function attributeChangedCallback(attribute, oldValue, newValue) {
 				console.log(attribute + " changed!");
-				if (this.parentNode) {
-					console.log("YEP CHANGED");
+				if (this.parentNode.app) {
 					this.parentNode.app._update_animations(this);
 				}
 			}
