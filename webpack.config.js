@@ -5,7 +5,7 @@ module.exports = {
     entry: [
         './src/Main.js'
     ],
-    output: {path: __dirname, filename: 'dist/shards.js'},
+    output: {path: __dirname, filename: 'dist/webgl-composer.js'},
     cache: true,
     debug: true,
     devtool: 'source-map',
